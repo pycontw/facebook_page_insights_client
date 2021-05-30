@@ -74,7 +74,37 @@ class Category(BaseModel):
     name: str
 
 
-class Data(BaseModel):
+class InsightsValue(BaseModel):
+    value: str
+    end_time: str
+
+
+class InsightsResult(BaseModel):
+    name: str
+    period: str
+    values: List[InsightsValue]
+    title: Optional[str]  # might be json null
+    description: str
+    id: str
+
+
+class InsightsCursors(BaseModel):
+
+    # get_page_insights
+    previous: str  # similar query but add since & until
+    next: str
+
+
+# class InsightsPaging(BaseModel):
+#     cursors: InsightsCursors
+
+
+class InsightsResponse(BaseModel):
+    data: List[InsightsResult]
+    paging: InsightsCursors
+
+
+class AccountResult(BaseModel):
     access_token: str
     category: str
     category_list: List[Category]
@@ -83,18 +113,19 @@ class Data(BaseModel):
     tasks: List[str] = []
 
 
-class Cursors(BaseModel):
+class AccountCursors(BaseModel):
+    # get_page_tokens
     before: str
     after: str
 
 
-class Paging(BaseModel):
-    cursors: Cursors
+class AccountPaging(BaseModel):
+    cursors: AccountCursors
 
 
-class Response(BaseModel):
-    data: List[Data]
-    paging: Paging
+class AccountResponse(BaseModel):
+    data: List[AccountResult]
+    paging: AccountPaging
 
 
 class LongLivedResponse(BaseModel):
@@ -141,7 +172,7 @@ class FBPageInsight:
         url = f'{self.api_url}/me/accounts?access_token={self.user_access_token}'
         r = requests.get(url)
         json_dict = r.json()
-        resp = Response(**json_dict)
+        resp = AccountResponse(**json_dict)
         if resp.data != None and len(resp.data) > 0:
             for data in resp.data:
                 if data.access_token != None and data.id == target_page_id:
@@ -168,7 +199,7 @@ class FBPageInsight:
             metric_value += ","+metric.name
         return metric_value
 
-    def get_page_insights(self, page_id, metric_list: List[Metric] = [], date_preset="yesterday", period="week"):
+    def get_page_insights(self, page_id, metric_list: List[Metric] = [], date_preset: DataPresent = DataPresent.yesterday, period: Period = Period.week):
 
         # TODO: validate parameters, metric_list: List[Metric] = [] is not clear to use default?
 
@@ -183,10 +214,11 @@ class FBPageInsight:
         else:
             page_token = self.page_access_token
         json_dict = self.compose_page_insights_request(page_token,
-                                                       page_id, "insights", {"metric": metric_value, "date_preset": date_preset, 'period': period})
+                                                       page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
 
-        # TODO: parse it
-        return json_dict
+        # parse it
+        resp = InsightsResponse(**json_dict)
+        return resp
 
     def get_posts(self):
         return
