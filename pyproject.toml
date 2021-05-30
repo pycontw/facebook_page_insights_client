@@ -6,6 +6,8 @@ authors = ["Grimmer <grimmer0125@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+pydantic = "^1.8.2"
+requests = "^2.25.1"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.7"
