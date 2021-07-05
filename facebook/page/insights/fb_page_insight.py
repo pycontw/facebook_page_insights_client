@@ -361,8 +361,8 @@ class FBPageInsight:
     #     return resp
 
     # todo:
-    # 1. handle pagination
-    def get_page_full(self, page_id, since=0, until=0, force_this_year=True) -> PageCompositeData:
+    # 1. refactor year part
+    def get_page_full(self, page_id, since=0, until=0, force_2021_whole_year=True) -> PageCompositeData:
         # e.g.
         # {
         #   "data": [
@@ -374,7 +374,7 @@ class FBPageInsight:
         page_summary = self.get_page_insights(page_id)
         page_summary_data = page_summary.data
 
-        if force_this_year:
+        if force_2021_whole_year:
             first_day_next_month = datetime.datetime(2021, 1, 1)
             since = int(time.mktime(first_day_next_month.timetuple()))
             until = int(time.time())
