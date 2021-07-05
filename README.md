@@ -40,5 +40,4 @@ Two methods:
 
 ## TODO:
 
-- setup VSCode debug test shortcut https://stackoverflow.com/questions/52786022/shortcut-for-running-terminal-command-in-vs-code
-- add CI/CD, may use tox
+https://github.com/pycontw/python-fb-page-insights-client/discussions/4
