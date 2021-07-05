@@ -2,6 +2,8 @@ from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 from enum import Enum, auto
 from dataclasses import dataclass, field
+import time
+import datetime
 
 import http.client
 import requests
@@ -10,7 +12,6 @@ logging.basicConfig(level=logging.DEBUG)
 http.client.HTTPConnection.debuglevel = 1
 
 
-# TODO: use these two
 class DataPresent(Enum):
     today = auto()
     yesterday = auto()
@@ -41,7 +42,7 @@ class Period(Enum):
     lifetime = auto()
 
 
-class Key(Enum):
+class QueryKey(Enum):
     grant_type = auto()
     client_id = auto()
     client_secret = auto()
@@ -53,6 +54,10 @@ class Key(Enum):
     access_token = auto()
 
 
+class QueryValue(Enum):
+    fb_exchange_token = auto()
+
+
 class PostDetailMetric(Enum):
     post_clicks_by_type = auto()
     post_activity_by_action_type = auto()
@@ -60,7 +65,9 @@ class PostDetailMetric(Enum):
     post_reactions_love_total = auto()
     post_reactions_wow_total = auto()
     post_reactions_haha_total = auto()
-    post_negative_feedback_by_type_unique = auto()  # not sure web uses it or below
+
+    # not sure web uses it or below
+    post_negative_feedback_by_type_unique = auto()
     post_negative_feedback_by_type = auto()
 
 
@@ -73,17 +80,16 @@ class PostMetric(Enum):
 class PageMetric(Enum):
     page_total_actions = auto()
     page_views_total = auto()
-    page_fan_adds_unique = auto()  # not sure web use this or below
+
+    # not sure web use this or below
+    page_fan_adds_unique = auto()
     page_fan_adds = auto()
+
     page_post_engagements = auto()
     page_video_views = auto()
     page_daily_follows_unique = auto()
     page_impressions_organic_unique = auto()
     page_daily_follows = auto()
-
-
-class Value(Enum):
-    fb_exchange_token = auto()
 
 
 class Category(BaseModel):
@@ -110,11 +116,11 @@ class InsightsValue(BaseModel):
     # if period is lifetime, end_time will not appear here
     end_time: Optional[str]
 
-    # -post_negative_feedback_by_type_unique/post_negative_feedback_by_type
-    # value: {}
+    # post_negative_feedback_by_type_unique/post_negative_feedback_by_type
+    # value: {} <- have never seen any data inside
 
 
-class InsightsResult(BaseModel):
+class InsightData(BaseModel):
     name: str
     period: str
     values: List[InsightsValue]
@@ -124,18 +130,16 @@ class InsightsResult(BaseModel):
 
 
 class InsightsCursors(BaseModel):
-
-    # get_page_insights
     previous: str  # similar query but add since & until
     next: str
 
 
 class InsightsResponse(BaseModel):
-    data: List[InsightsResult]
+    data: List[InsightData]
     paging: InsightsCursors
 
 
-class AccountResult(BaseModel):
+class AccountData(BaseModel):
     access_token: str
     category: str
     category_list: List[Category]
@@ -155,30 +159,37 @@ class AccountPaging(BaseModel):
 
 
 class AccountResponse(BaseModel):
-    data: List[AccountResult]
+    data: List[AccountData]
     paging: AccountPaging
 
 
-class PostsResult(BaseModel):
+class PostData(BaseModel):
     created_time: str
     message: Optional[str]  # either message or story
     story: Optional[str]  # "story": "PyCon Taiwan 更新了封面相片。",
     id: str
 
 
+class PostCompositeData(BaseModel):
+    meta: PostData
+    insight_data: Optional[List[InsightData]]
+    insight_data_complement: Optional[List[InsightData]]
+
+
+class PageCompositeData(BaseModel):
+    fetch_time: Optional[int]
+    page: List[InsightData]
+    posts: List[PostCompositeData]
+
+
 class PostsPaging(BaseModel):
     cursors: AccountCursors
-    next: str
+    next: Optional[str]
 
 
 class PostsResponse(BaseModel):
-    data: List[PostsResult]
+    data: List[PostData]
     paging: PostsPaging
-
-
-# class PostInfoResponse(BaseModel):
-#     data: List[InsightsResult]
-#     paging: InsightsCursors
 
 
 class LongLivedResponse(BaseModel):
@@ -195,7 +206,6 @@ class FBPageInsight:
     # https://developers.facebook.com/docs/graph-api/reference/v10.0/insights
     api_server: str = field(init=False, default='https://graph.facebook.com')
     api_version = 'v10.0'
-    mylist: list = field(default_factory=list)
 
     def __post_init__(self):
         pass
@@ -275,7 +285,7 @@ class FBPageInsight:
         resp = InsightsResponse(**json_dict)
         return resp
 
-    def get_recent_posts(self, page_id):
+    def get_recent_posts(self, page_id, since: int = 0, until: int = 0):
         # could use page_token or user_access_token
         page_token = ""
         if self.page_access_token == "":
@@ -283,19 +293,41 @@ class FBPageInsight:
         else:
             page_token = self.page_access_token
 
-        json_dict = self.compose_page_insights_request(page_token,
-                                                       page_id, "posts")
+        # get_all = False
+        next_url = ""
+        post_data_list: List[PostData] = []
+        while next_url != None:
+            if next_url == "":
+                if since != 0 and until != 0:
+                    json_dict = self.compose_page_insights_request(page_token,
+                                                                   # {"since": 1601555261, "until": 1625489082})
+                                                                   page_id, "posts", {"since": since, "until": until})
+                else:
+                    json_dict = self.compose_page_insights_request(page_token,
+                                                                   page_id, "posts")
+                resp = PostsResponse(**json_dict)
+            else:
+                r = requests.get(next_url)
+                json_dict = r.json()
+                resp = PostsResponse(**json_dict)
+            next_url = resp.paging.next
+            post_data_list += resp.data
+        total_resp = PostsResponse(data=post_data_list, paging=resp.paging)
+        return total_resp
 
-        resp = PostsResponse(**json_dict)
-        return resp
-
-    def get_post_info(self, post_id, user_defined_metric_list: List[PostMetric] = []):
-
+    def get_post_insight(self, post_id, basic_metric=True, complement_metric=True, user_defined_metric_list=[]):
         page_id = post_id.split('_')[0]
 
         if len(user_defined_metric_list) == 0:
-            user_defined_metric_list = [e for e in PostMetric]
-        metric_value = self.convert_metric_list(user_defined_metric_list)
+            metric_list = []
+            if basic_metric is True:
+                metric_list += [
+                    e for e in PostMetric]
+            if complement_metric is True:
+                metric_list += [e for e in PostDetailMetric]
+        else:
+            metric_list = user_defined_metric_list
+        metric_value = self.convert_metric_list(metric_list)
 
         # TODO: refactor this part
         page_token = ""
@@ -309,27 +341,67 @@ class FBPageInsight:
         resp = InsightsResponse(**json_dict)
         return resp
 
-    # TODO: refactor this
-    def get_post_info_detail(self, post_id, user_defined_metric_list: List[PostDetailMetric] = []):
-        page_id = post_id.split('_')[0]
+    # def get_post_insight_complement(self, post_id, user_defined_metric_list: List[PostDetailMetric] = []):
+    #     page_id = post_id.split('_')[0]
 
-        if len(user_defined_metric_list) == 0:
-            user_defined_metric_list = [e for e in PostDetailMetric]
-        metric_value = self.convert_metric_list(user_defined_metric_list)
+    #     if len(user_defined_metric_list) == 0:
+    #         user_defined_metric_list = [e for e in PostDetailMetric]
+    #     metric_value = self.convert_metric_list(user_defined_metric_list)
 
-        # TODO: refactor this part
-        page_token = ""
-        if self.page_access_token == "":
-            page_token = self.get_page_tokens(page_id)
-        else:
-            page_token = self.page_access_token
+    #     page_token = ""
+    #     if self.page_access_token == "":
+    #         page_token = self.get_page_tokens(page_id)
+    #     else:
+    #         page_token = self.page_access_token
 
-        json_dict = self.compose_page_insights_request(page_token,
-                                                       post_id, "insights", {"metric": metric_value})
+    #     json_dict = self.compose_page_insights_request(page_token,
+    #                                                    post_id, "insights", {"metric": metric_value})
 
-        # TODO: add union of responseObject?
-        resp = InsightsResponse(**json_dict)
-        return resp
+    #     resp = InsightsResponse(**json_dict)
+    #     return resp
+
+    # todo:
+    # 1. handle pagination
+    def get_page_full(self, page_id, since=0, until=0, force_this_year=True) -> PageCompositeData:
+        # e.g.
+        # {
+        #   "data": [
+        #     "name": "page_total_actions",
+        #   ]
+        #   "paging": {
+        #   }
+        # }
+        page_summary = self.get_page_insights(page_id)
+        page_summary_data = page_summary.data
+
+        if force_this_year:
+            first_day_next_month = datetime.datetime(2021, 1, 1)
+            since = int(time.mktime(first_day_next_month.timetuple()))
+            until = int(time.time())
+
+        recent_posts = self.get_recent_posts(page_id, since, until)
+        posts_data = recent_posts.data
+
+        post_composite_list = []
+        # iterate each post
+        for post in posts_data:
+            composite_data = PostCompositeData(meta=post)
+            composite_data.insight_data = []
+            composite_data.insight_data_complement = []
+            post_composite_list.append(composite_data)
+            post_id = post.id
+            post_insight = self.get_post_insight(post_id)
+            post_insight_data = post_insight.data
+            for post_insight in post_insight_data:
+                if post_insight.name in PostMetric.__members__:
+                    composite_data.insight_data.append(post_insight)
+                else:
+                    composite_data.insight_data_complement.append(post_insight)
+            print("query post info. done")
+        print('query finish')
+        page_composite_data = PageCompositeData(time=int(time.time()),
+                                                page=page_summary_data, posts=post_composite_list)
+        return page_composite_data
 
     def dummy_test(self):
         return "ok"
