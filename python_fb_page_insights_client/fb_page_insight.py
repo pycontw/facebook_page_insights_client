@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 from pydantic import BaseModel, Field
 from enum import Enum, auto
 from dataclasses import dataclass, field
@@ -112,7 +112,7 @@ class PostActivityValue(BaseModel):
 
 class InsightsValue(BaseModel):
     # TODO: how to handle union?
-    value: Union[int, PostClickValue, PostActivityValue,  dict]  #
+    value: Union[int, PostClickValue, PostActivityValue,  Dict]  #
     # if period is lifetime, end_time will not appear here
     end_time: Optional[str]
 
@@ -243,14 +243,14 @@ class FBPageInsight:
         return ""
 
     # TODO: add since/until (e.g. since=1620802800&until=1620975600)
-    def compose_page_insights_request(self, token, object_id, endpoint, param_dict: dict[str, str] = {}):
+    def compose_page_insights_request(self, token, object_id, endpoint, param_dict: Dict[str, str] = {}):
         params = self.convert_para_dict(param_dict)
         url = f'{self.api_url}/{object_id}/{endpoint}?access_token={token}{params}'
         r = requests.get(url)
         json_dict = r.json()
         return json_dict
 
-    def convert_para_dict(self, param_dict: dict[str, str]):
+    def convert_para_dict(self, param_dict: Dict[str, str]):
         params = ""
         for key, value in param_dict.items():
             params += f'&{key}={value}'
@@ -285,6 +285,7 @@ class FBPageInsight:
         resp = InsightsResponse(**json_dict)
         return resp
 
+    # todo: handle until is smaller than since
     def get_recent_posts(self, page_id, since: int = 0, until: int = 0):
         # could use page_token or user_access_token
         page_token = ""
