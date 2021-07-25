@@ -4,6 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Grimmer <grimmer0125@gmail.com>"]
 
+
 [tool.poetry.dependencies]
 python = "^3.7.1"
 pydantic = "^1.8.2"
