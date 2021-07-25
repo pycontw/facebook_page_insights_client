@@ -362,7 +362,7 @@ class FBPageInsight:
 
     # todo:
     # 1. refactor year part
-    def get_page_full(self, page_id, since=0, until=0, force_2021_whole_year=True) -> PageCompositeData:
+    def get_page_full(self, page_id, since_date=(2020, 9, 7), until_date=None) -> PageCompositeData:
         # e.g.
         # {
         #   "data": [
@@ -374,10 +374,16 @@ class FBPageInsight:
         page_summary = self.get_page_insights(page_id)
         page_summary_data = page_summary.data
 
-        if force_2021_whole_year:
-            first_day_next_month = datetime.datetime(2021, 1, 1)
-            since = int(time.mktime(first_day_next_month.timetuple()))
-            until = int(time.time())
+        # if force_2021_whole_year:
+        # first_day_next_month = datetime.datetime(2021, 1, 1)
+        # e.g. 1609430400
+        since = int(time.mktime(datetime.datetime(*since_date).timetuple()))
+
+        if until_date == None:
+            until = int(time.time())  # 1627209209
+        else:
+            until = int(time.mktime(
+                datetime.datetime(*until_date).timetuple()))
 
         recent_posts = self.get_recent_posts(page_id, since, until)
         posts_data = recent_posts.data
