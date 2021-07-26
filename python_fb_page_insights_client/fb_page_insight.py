@@ -406,7 +406,7 @@ class FBPageInsight:
                     composite_data.insight_data_complement.append(post_insight)
             print("query post info. done")
         print('query finish')
-        page_composite_data = PageCompositeData(time=int(time.time()),
+        page_composite_data = PageCompositeData(fetch_time=int(time.time()),
                                                 page=page_summary_data, posts=post_composite_list)
         return page_composite_data
 
