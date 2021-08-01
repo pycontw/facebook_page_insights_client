@@ -89,7 +89,7 @@ class PageMetric(Enum):
     page_video_views = auto()
     page_daily_follows_unique = auto()
     page_impressions_organic_unique = auto()
-    page_daily_follows = auto()
+    # page_daily_follows = auto()
 
 
 class Category(BaseModel):
@@ -99,15 +99,15 @@ class Category(BaseModel):
 
 class PostClickValue(BaseModel):
 
-    other_clicks: int = Field(alias='other clicks')
     photo_view: int = Field(alias='photo view')
     link_clicks: int = Field(alias='link clicks')
+    other_clicks: int = Field(alias='other clicks')
 
 
 class PostActivityValue(BaseModel):
-    share: int
-    like: int
-    comment: int
+    share: Optional[int]
+    like: Optional[int]
+    comment: Optional[int]
 
 
 class InsightsValue(BaseModel):
