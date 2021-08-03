@@ -1,1 +1,1 @@
-from .fb_page_insight import FBPageInsight, PageCompositeData, PostMetric, PageMetric, PostDetailMetric  # InsightData
+from .fb_page_insight import FBPageInsight, PagePostsCompositeData, PostMetric, PageMetric, PostDetailMetric, PostsDefaultWebInsight, PostDefaultWebInsight, PageDefaultWebInsight  # InsightData
