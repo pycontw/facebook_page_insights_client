@@ -230,7 +230,7 @@ class PartialJSONSchema(BaseModel):
 class PageWebInsightData(BaseModel):
     data: Optional[PageDefaultWebInsight]
     json_schema: Optional[PartialJSONSchema]
-    desc_dict: Optional[Dict[str, str]]
+    used_metric_desc_dict: Optional[Dict[str, str]]
 
 
 class PostDefaultWebInsight(BaseModel):
@@ -252,7 +252,7 @@ class PostDefaultWebInsight(BaseModel):
 class PostsWebInsightData(BaseModel):
     data: List[PostDefaultWebInsight] = []
     json_schema: Optional[PartialJSONSchema]
-    desc_dict: Optional[Dict[str, str]]
+    used_metric_desc_dict: Optional[Dict[str, str]]
 
 
 class LongLivedResponse(BaseModel):
@@ -475,14 +475,14 @@ class FBPageInsight:
 
     def __organize_to_web_page_data_shape(self, page_data: List[InsightData]):
         insight = PageDefaultWebInsight()
-        desc_dict = {}
+        # desc_dict = {}
 
         # resp = {}
         for page_insight_data in page_data:  # InsightData
             key = page_insight_data.name
             value_obj = page_insight_data.values[0]  # union.
             value = value_obj.value
-            desc_dict[key] = page_insight_data.description
+            # desc_dict[key] = page_insight_data.description
             if key == PageMetric.page_total_actions.name:
                 # key = "actions_on_page"
                 insight.actions_on_page = value
@@ -525,7 +525,7 @@ class FBPageInsight:
         schema = PageDefaultWebInsight.schema()
         pageInsightData = PageWebInsightData()
         pageInsightData.data = insight
-        pageInsightData.desc_dict = desc_dict
+        # pageInsightData.used_metric_desc_dict = desc_dict
         partial = PartialJSONSchema(**schema)
         pageInsightData.json_schema = partial
         return pageInsightData
@@ -533,7 +533,7 @@ class FBPageInsight:
     def __organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData]):
         # todo: how to convert desc_dict to bigquery column desc as activity/click have 1 to many relation ???
 
-        desc_dict = {}
+        # desc_dict = {}
         postsWebInsight = PostsWebInsightData()
         # for post_composite_data in posts_data:
         for i, post_composite_data in enumerate(posts_data):
@@ -543,7 +543,7 @@ class FBPageInsight:
             for post_inisght_data in insight_data:
 
                 key = post_inisght_data.name
-                desc_dict[key] = post_inisght_data.description
+                # desc_dict[key] = post_inisght_data.description
 
                 # list of InsightsValue.
                 value_obj = post_inisght_data.values[0]
@@ -561,7 +561,7 @@ class FBPageInsight:
             insight_data_complement = post_composite_data.insight_data_complement
             for post_inisght_data in insight_data_complement:
                 key = post_inisght_data.name
-                desc_dict[key] = post_inisght_data.description
+                # desc_dict[key] = post_inisght_data.description
                 if key == PostDetailMetric.post_activity_by_action_type.name:
                     data = post_inisght_data.values[0].value
                     # on web, this value = sum(on post + on shares) but no api to get sub part
@@ -630,7 +630,7 @@ class FBPageInsight:
         schema = PostDefaultWebInsight.schema()
         partial = PartialJSONSchema(**schema)
         postsWebInsight.json_schema = partial
-        postsWebInsight.desc_dict = desc_dict
+        # postsWebInsight.used_metric_desc_dict = desc_dict
         return postsWebInsight
 
     def dummy_test(self):
