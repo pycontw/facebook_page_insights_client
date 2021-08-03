@@ -89,35 +89,31 @@ class PageMetric(Enum):
     page_video_views = auto()
     page_daily_follows_unique = auto()
     page_impressions_organic_unique = auto()
-    # page_daily_follows = auto()
 
 
-class Category(BaseModel):
-    id: str
-    name: str
+# class PostClickValue(BaseModel):
+
+#     photo_view: int = Field(None, alias='photo view')
+#     link_clicks: int = Field(None, alias='link clicks')
+#     other_clicks: int = Field(None, alias='other clicks')
 
 
-class PostClickValue(BaseModel):
-
-    photo_view: int = Field(alias='photo view')
-    link_clicks: int = Field(alias='link clicks')
-    other_clicks: int = Field(alias='other clicks')
-
-
-class PostActivityValue(BaseModel):
-    share: Optional[int]
-    like: Optional[int]
-    comment: Optional[int]
+# class PostActivityValue(BaseModel):
+#     share: int = None
+#     like: int = None
+#     comment: int = None
 
 
 class InsightsValue(BaseModel):
     # TODO: how to handle union?
-    value: Union[int, PostClickValue, PostActivityValue,  Dict]  #
+    # Dict is for post_negative_feedback_by_type_unique/post_negative_feedback_by_type part
+    # remove PostActivityValue, PostClickValue in union since pydantic has bugs
+    # when dealing with union, https://github.com/samuelcolvin/pydantic/issues/2941
+    value: Union[int, Dict] = None
+    #value: PostActivityValue
+
     # if period is lifetime, end_time will not appear here
     end_time: Optional[str]
-
-    # post_negative_feedback_by_type_unique/post_negative_feedback_by_type
-    # value: {} <- have never seen any data inside
 
 
 class InsightData(BaseModel):
@@ -134,9 +130,15 @@ class InsightsCursors(BaseModel):
     next: str
 
 
+# page & post both use this
 class InsightsResponse(BaseModel):
     data: List[InsightData]
     paging: InsightsCursors
+
+
+class Category(BaseModel):
+    id: str
+    name: str
 
 
 class AccountData(BaseModel):
@@ -148,14 +150,15 @@ class AccountData(BaseModel):
     tasks: List[str] = []
 
 
-class AccountCursors(BaseModel):
+# AccountResponse & PostsResponse/PostsPaging both use this
+class BeforeAfterCursors(BaseModel):
     # get_page_tokens
     before: str
     after: str
 
 
 class AccountPaging(BaseModel):
-    cursors: AccountCursors
+    cursors: BeforeAfterCursors
 
 
 class AccountResponse(BaseModel):
@@ -170,26 +173,56 @@ class PostData(BaseModel):
     id: str
 
 
-class PostCompositeData(BaseModel):
-    meta: PostData
-    insight_data: Optional[List[InsightData]]
-    insight_data_complement: Optional[List[InsightData]]
-
-
-class PageCompositeData(BaseModel):
-    fetch_time: Optional[int]
-    page: List[InsightData]
-    posts: List[PostCompositeData]
-
-
 class PostsPaging(BaseModel):
-    cursors: AccountCursors
+    cursors: BeforeAfterCursors
     next: Optional[str]
 
 
 class PostsResponse(BaseModel):
     data: List[PostData]
     paging: PostsPaging
+
+
+class PostCompositeData(BaseModel):
+    meta: PostData
+    insight_data: Optional[List[InsightData]]
+    insight_data_complement: Optional[List[InsightData]]
+
+
+class PagePostsCompositeData(BaseModel):
+    fetch_time: Optional[int]
+    page: List[InsightData] = []
+    posts: List[PostCompositeData] = []
+
+
+class PageDefaultWebInsight(BaseModel):
+    actions_on_page: int = None
+    page_views: int = None
+    people_likes: int = None
+    post_engagement: int = None
+    videos: int = None
+    page_followers: int = None
+    post_reach: int = None
+
+
+class PostDefaultWebInsight(BaseModel):
+    reach: int = None
+    engagement_post_clicks: int = None
+    engagement_activity: int = None
+    likes: int = None
+    comments: int = None
+    shares: int = None
+    photo_views: int = None
+    link_clicks: int = None
+    other_clicks: int = None
+    likes_like: int = None
+    likes_love: int = None
+    likes_wow: int = None
+    likes_haha: int = None
+
+
+class PostsDefaultWebInsight(BaseModel):
+    posts: List[PostDefaultWebInsight] = []
 
 
 class LongLivedResponse(BaseModel):
@@ -243,20 +276,20 @@ class FBPageInsight:
         return ""
 
     # TODO: add since/until (e.g. since=1620802800&until=1620975600)
-    def compose_page_insights_request(self, token, object_id, endpoint, param_dict: Dict[str, str] = {}):
-        params = self.convert_para_dict(param_dict)
+    def compose_insight_api_request(self, token, object_id, endpoint, param_dict: Dict[str, str] = {}):
+        params = self.__convert_para_dict(param_dict)
         url = f'{self.api_url}/{object_id}/{endpoint}?access_token={token}{params}'
         r = requests.get(url)
         json_dict = r.json()
         return json_dict
 
-    def convert_para_dict(self, param_dict: Dict[str, str]):
+    def __convert_para_dict(self, param_dict: Dict[str, str]):
         params = ""
         for key, value in param_dict.items():
             params += f'&{key}={value}'
         return params
 
-    def convert_metric_list(self, metric_list: List[PageMetric]):
+    def __convert_metric_list(self, metric_list: List[PageMetric]):
         metric_value = ''
         for i in range(0, len(metric_list)):
             metric = metric_list[i]
@@ -272,15 +305,15 @@ class FBPageInsight:
 
         if len(user_defined_metric_list) == 0:
             user_defined_metric_list = [e for e in PageMetric]
-        metric_value = self.convert_metric_list(user_defined_metric_list)
+        metric_value = self.__convert_metric_list(user_defined_metric_list)
 
         page_token = ""
         if self.page_access_token == "":
             page_token = self.get_page_tokens(page_id)
         else:
             page_token = self.page_access_token
-        json_dict = self.compose_page_insights_request(page_token,
-                                                       page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
+        json_dict = self.compose_insight_api_request(page_token,
+                                                     page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
 
         resp = InsightsResponse(**json_dict)
         return resp
@@ -300,12 +333,12 @@ class FBPageInsight:
         while next_url != None:
             if next_url == "":
                 if since != 0 and until != 0:
-                    json_dict = self.compose_page_insights_request(page_token,
-                                                                   # {"since": 1601555261, "until": 1625489082})
-                                                                   page_id, "posts", {"since": since, "until": until})
+                    json_dict = self.compose_insight_api_request(page_token,
+                                                                 # {"since": 1601555261, "until": 1625489082})
+                                                                 page_id, "posts", {"since": since, "until": until})
                 else:
-                    json_dict = self.compose_page_insights_request(page_token,
-                                                                   page_id, "posts")
+                    json_dict = self.compose_insight_api_request(page_token,
+                                                                 page_id, "posts")
                 resp = PostsResponse(**json_dict)
             else:
                 r = requests.get(next_url)
@@ -328,7 +361,7 @@ class FBPageInsight:
                 metric_list += [e for e in PostDetailMetric]
         else:
             metric_list = user_defined_metric_list
-        metric_value = self.convert_metric_list(metric_list)
+        metric_value = self.__convert_metric_list(metric_list)
 
         # TODO: refactor this part
         page_token = ""
@@ -337,33 +370,25 @@ class FBPageInsight:
         else:
             page_token = self.page_access_token
 
-        json_dict = self.compose_page_insights_request(page_token,
-                                                       post_id, "insights", {"metric": metric_value})
+        json_dict = self.compose_insight_api_request(page_token,
+                                                     post_id, "insights", {"metric": metric_value})
         resp = InsightsResponse(**json_dict)
         return resp
 
-    # def get_post_insight_complement(self, post_id, user_defined_metric_list: List[PostDetailMetric] = []):
-    #     page_id = post_id.split('_')[0]
+    # TODO: add since/until or date_preset/period
+    def get_page_default_web_insight(self, page_id):
+        page_summary = self.get_page_insights(page_id)
+        page_summary_data = page_summary.data
 
-    #     if len(user_defined_metric_list) == 0:
-    #         user_defined_metric_list = [e for e in PostDetailMetric]
-    #     metric_value = self.convert_metric_list(user_defined_metric_list)
+        # page_composite_data = PagePostsCompositeData(
+        #     fetch_time=int(time.time()), page=page_summary_data)
 
-    #     page_token = ""
-    #     if self.page_access_token == "":
-    #         page_token = self.get_page_tokens(page_id)
-    #     else:
-    #         page_token = self.page_access_token
+        resp = self.__organize_to_web_page_data_shape(page_summary_data)
 
-    #     json_dict = self.compose_page_insights_request(page_token,
-    #                                                    post_id, "insights", {"metric": metric_value})
+        return resp
 
-    #     resp = InsightsResponse(**json_dict)
-    #     return resp
+    def get_post_default_web_insight(self, page_id, since_date=(2020, 9, 7), until_date=None):
 
-    # todo:
-    # 1. refactor year part
-    def get_page_full(self, page_id, since_date=(2020, 9, 7), until_date=None) -> PageCompositeData:
         # e.g.
         # {
         #   "data": [
@@ -372,8 +397,8 @@ class FBPageInsight:
         #   "paging": {
         #   }
         # }
-        page_summary = self.get_page_insights(page_id)
-        page_summary_data = page_summary.data
+        # page_summary = self.get_page_insights(page_id)
+        # page_summary_data = page_summary.data
 
         # if force_2021_whole_year:
         # first_day_next_month = datetime.datetime(2021, 1, 1)
@@ -406,9 +431,151 @@ class FBPageInsight:
                     composite_data.insight_data_complement.append(post_insight)
             print("query post info. done")
         print('query finish')
-        page_composite_data = PageCompositeData(fetch_time=int(time.time()),
-                                                page=page_summary_data, posts=post_composite_list)
-        return page_composite_data
+        # page_composite_data = PagePostsCompositeData(fetch_time=int(time.time()),
+        #                                              posts=post_composite_list)
+
+        # organize to the data structure shown on web
+        resp = self.__organize_to_web_posts_data_shape(post_composite_list)
+
+        return resp
+
+    def __organize_to_web_page_data_shape(self, page_data: List[InsightData]):
+        insight = PageDefaultWebInsight()
+        # resp = {}
+        for page_insight_data in page_data:  # InsightData
+            key = page_insight_data.name
+            value_obj = page_insight_data.values[0]  # union.
+            value = value_obj.value
+            if key == PageMetric.page_total_actions.name:
+                # key = "actions_on_page"
+                insight.actions_on_page = value
+            elif key == PageMetric.page_views_total.name:
+                # key = "page_views"
+                insight.page_views = value
+            elif key == PageMetric.page_fan_adds_unique.name:
+                # key = "people_likes"
+                insight.people_likes = value
+            elif key == PageMetric.page_fan_adds.name:
+                pass
+            elif key == PageMetric.page_post_engagements.name:
+                # key = "post_engagement"
+                insight.post_engagement = value
+            elif key == PageMetric.page_video_views.name:
+                # key = "videos"
+                insight.videos = value
+            elif key == PageMetric.page_daily_follows_unique.name:
+                # key = "page_followers"
+                insight.page_followers = value
+            elif key == PageMetric.page_impressions_organic_unique.name:
+                # key = "post_reach"
+                insight.post_reach = value
+
+            # we only care about name & values, other are meta fields
+            # name: str
+            # period: str, e.g. week/lifetime
+            # title: Optional[str]  # might be json null
+            # description: str
+            # id: str
+            # values: List[InsightsValue]
+
+            # PageMetric
+
+            # resp[key] = value
+            # tt = type(value)
+            # print("done")
+        return insight
+
+    def __organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData]):
+        insight_list = PostsDefaultWebInsight()
+        # for post_composite_data in posts_data:
+        for i, post_composite_data in enumerate(posts_data):
+            insight = PostDefaultWebInsight()
+            insight_list.posts.append(insight)
+            insight_data = post_composite_data.insight_data
+            for post_inisght_data in insight_data:
+
+                key = post_inisght_data.name
+
+                # list of InsightsValue.
+                value_obj = post_inisght_data.values[0]
+                value = value_obj.value  # value is union, currently it is int now
+                if key == PostMetric.post_impressions_organic_unique.name:
+                    # key = "reach"
+                    insight.reach = value
+                elif key == PostMetric.post_clicks.name:
+                    # key = "engagement_post_clicks"
+                    insight.engagement_post_clicks = value
+                elif key == PostMetric.post_activity.name:
+                    # key = "engagement_activity"
+                    insight.engagement_activity = value
+
+            insight_data_complement = post_composite_data.insight_data_complement
+            for post_inisght_data in insight_data_complement:
+                key = post_inisght_data.name
+                if key == PostDetailMetric.post_activity_by_action_type.name:
+                    data = post_inisght_data.values[0].value
+                    # on web, this value = sum(on post + on shares) but no api to get sub part
+                    # value["likes"] = data.like
+                    # value["comments"] = data.comment
+                    # value["shares"] = data.share
+                    # try:
+                    insight.likes = data.get('like')
+                    insight.comments = data.get('comment')
+                    insight.shares = data.get('share')
+                    # except:
+                    #     print(
+                    #         "it is a hard handle case for union + empty data, it would use PostClickValue")
+
+                elif key == PostDetailMetric.post_clicks_by_type.name:
+                    data = post_inisght_data.values[0].value
+
+                    insight.photo_views = data.get('photo view')
+                    insight.link_clicks = data.get('link clicks')
+                    insight.other_clicks = data.get('other clicks')
+
+                    # except:
+                    #print("it is a hard handle case for union")
+
+                elif key == PostDetailMetric.post_negative_feedback_by_type_unique.name:
+                    # TODO: add it later when we figure its data shape
+                    # 1. not sure whether web use this or below
+                    # 2. always see no data, empty {}
+                    value_obj = post_inisght_data.values[0]
+                    value_dict = value_obj.value
+                elif key == PostDetailMetric.post_negative_feedback_by_type.name:
+                    pass
+                else:
+                    value_obj = post_inisght_data.values[0]
+                    value = value_obj.value
+                    if key == PostDetailMetric.post_reactions_like_total.name:
+                        # key = "likes_like"
+                        insight.likes_like = value
+                    elif key == PostDetailMetric.post_reactions_love_total.name:
+                        # key = "likes_love"
+                        insight.likes_love = value
+                    elif key == PostDetailMetric.post_reactions_wow_total.name:
+                        # key = "likes_wow"
+                        insight.likes_wow = value
+                    elif key == PostDetailMetric.post_reactions_haha_total.name:
+                        # key = "likes_haha"
+                        insight.likes_haha = value
+
+                    # e.g.
+                    # value field:
+                    # x post_clicks_by_type
+                    #   {photo_view:1, link_clicks: 13, other_clicks:32}
+                    # x post_activity_by_action_type
+                    #   {like: 34, comment, share}
+                    # post_reactions_like_total
+                    #   34
+                    # post_reactions_love_total
+                    #   0
+                    # post_reactions_wow_total
+                    #   0
+                    # post_reactions_haha_total
+                    #   0
+
+        return insight_list
 
     def dummy_test(self):
         return "ok"
