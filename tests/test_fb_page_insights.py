@@ -1,4 +1,4 @@
-from python_fb_page_insights_client import FBPageInsight, PagePostsCompositeData, PostMetric, PageMetric, PostDetailMetric, PostsDefaultWebInsight, PageDefaultWebInsight
+from python_fb_page_insights_client import FBPageInsight, PageWebInsightData, PostMetric, PageMetric, PostDetailMetric, PostsWebInsightData, PageDefaultWebInsight
 import unittest
 import os
 
@@ -25,10 +25,10 @@ class TestStringMethods(unittest.TestCase):
         pycontw_page_id = '160712400714277'
         fb = FBPageInsight(**args)
 
-        page_insight: PageDefaultWebInsight = fb.get_page_default_web_insight(
+        page_insight: PageWebInsightData = fb.get_page_default_web_insight(
             pycontw_page_id)
 
-        posts_insight: PostsDefaultWebInsight = fb.get_post_default_web_insight(
+        posts_insight: PostsWebInsightData = fb.get_post_default_web_insight(
             pycontw_page_id, until_date=(2020, 11, 15))
 
         self.assertEqual("ok", "ok")

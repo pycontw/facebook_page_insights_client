@@ -93,15 +93,23 @@ class PageMetric(Enum):
 
 # class PostClickValue(BaseModel):
 
-#     photo_view: int = Field(None, alias='photo view')
-#     link_clicks: int = Field(None, alias='link clicks')
-#     other_clicks: int = Field(None, alias='other clicks')
-
 
 # class PostActivityValue(BaseModel):
 #     share: int = None
 #     like: int = None
 #     comment: int = None
+
+class PostExtraValue(BaseModel):
+    ''' since pydantic union has some bug, so combine them (intersection)'''
+
+    # PostActivityValue
+    share: int = None
+    like: int = None
+    comment: int = None
+    # PostActivityValue
+    photo_view: int = Field(None, alias='photo view')
+    link_clicks: int = Field(None, alias='link clicks')
+    other_clicks: int = Field(None, alias='other clicks')
 
 
 class InsightsValue(BaseModel):
@@ -109,7 +117,7 @@ class InsightsValue(BaseModel):
     # Dict is for post_negative_feedback_by_type_unique/post_negative_feedback_by_type part
     # remove PostActivityValue, PostClickValue in union since pydantic has bugs
     # when dealing with union, https://github.com/samuelcolvin/pydantic/issues/2941
-    value: Union[int, Dict] = None
+    value: Union[int, PostExtraValue] = None
     #value: PostActivityValue
 
     # if period is lifetime, end_time will not appear here
@@ -189,20 +197,40 @@ class PostCompositeData(BaseModel):
     insight_data_complement: Optional[List[InsightData]]
 
 
-class PagePostsCompositeData(BaseModel):
-    fetch_time: Optional[int]
-    page: List[InsightData] = []
-    posts: List[PostCompositeData] = []
+# class PagePostsCompositeData(BaseModel):
+#     fetch_time: Optional[int]
+#     page: List[InsightData] = []
+#     posts: List[PostCompositeData] = []
 
 
 class PageDefaultWebInsight(BaseModel):
     actions_on_page: int = None
     page_views: int = None
-    people_likes: int = None
+    page_likes: int = None
     post_engagement: int = None
     videos: int = None
     page_followers: int = None
     post_reach: int = None
+
+
+class PartialJSONSchema(BaseModel):
+    # e.g.
+    # "count": {
+    #   "title": "Count",
+    #   "type": "integer"
+    # },
+    properties: Optional[Dict[str, Dict]]
+
+    # "required": [
+    #   "count"
+    # ]
+    required: Optional[List[str]]
+
+
+class PageWebInsightData(BaseModel):
+    data: Optional[PageDefaultWebInsight]
+    json_schema: Optional[PartialJSONSchema]
+    desc_dict: Optional[Dict[str, str]]
 
 
 class PostDefaultWebInsight(BaseModel):
@@ -221,8 +249,10 @@ class PostDefaultWebInsight(BaseModel):
     likes_haha: int = None
 
 
-class PostsDefaultWebInsight(BaseModel):
-    posts: List[PostDefaultWebInsight] = []
+class PostsWebInsightData(BaseModel):
+    data: List[PostDefaultWebInsight] = []
+    json_schema: Optional[PartialJSONSchema]
+    desc_dict: Optional[Dict[str, str]]
 
 
 class LongLivedResponse(BaseModel):
@@ -376,7 +406,7 @@ class FBPageInsight:
         return resp
 
     # TODO: add since/until or date_preset/period
-    def get_page_default_web_insight(self, page_id):
+    def get_page_default_web_insight(self, page_id, as_dict=False):
         page_summary = self.get_page_insights(page_id)
         page_summary_data = page_summary.data
 
@@ -385,9 +415,11 @@ class FBPageInsight:
 
         resp = self.__organize_to_web_page_data_shape(page_summary_data)
 
+        if as_dict == True:
+            return resp.dict()
         return resp
 
-    def get_post_default_web_insight(self, page_id, since_date=(2020, 9, 7), until_date=None):
+    def get_post_default_web_insight(self, page_id, since_date=(2020, 9, 7), until_date=None,  as_dict=False):
 
         # e.g.
         # {
@@ -437,15 +469,20 @@ class FBPageInsight:
         # organize to the data structure shown on web
         resp = self.__organize_to_web_posts_data_shape(post_composite_list)
 
+        if as_dict == True:
+            return resp.dict()
         return resp
 
     def __organize_to_web_page_data_shape(self, page_data: List[InsightData]):
         insight = PageDefaultWebInsight()
+        desc_dict = {}
+
         # resp = {}
         for page_insight_data in page_data:  # InsightData
             key = page_insight_data.name
             value_obj = page_insight_data.values[0]  # union.
             value = value_obj.value
+            desc_dict[key] = page_insight_data.description
             if key == PageMetric.page_total_actions.name:
                 # key = "actions_on_page"
                 insight.actions_on_page = value
@@ -454,7 +491,7 @@ class FBPageInsight:
                 insight.page_views = value
             elif key == PageMetric.page_fan_adds_unique.name:
                 # key = "people_likes"
-                insight.people_likes = value
+                insight.page_likes = value
             elif key == PageMetric.page_fan_adds.name:
                 pass
             elif key == PageMetric.page_post_engagements.name:
@@ -463,10 +500,11 @@ class FBPageInsight:
             elif key == PageMetric.page_video_views.name:
                 # key = "videos"
                 insight.videos = value
+            # not found on https://developers.facebook.com/docs/graph-api/reference/v11.0/insights
             elif key == PageMetric.page_daily_follows_unique.name:
                 # key = "page_followers"
                 insight.page_followers = value
-            elif key == PageMetric.page_impressions_organic_unique.name:
+            elif key == PageMetric.page_impressions_organic_unique.name:  # page_fans_gender_age?
                 # key = "post_reach"
                 insight.post_reach = value
 
@@ -483,18 +521,29 @@ class FBPageInsight:
             # resp[key] = value
             # tt = type(value)
             # print("done")
-        return insight
+
+        schema = PageDefaultWebInsight.schema()
+        pageInsightData = PageWebInsightData()
+        pageInsightData.data = insight
+        pageInsightData.desc_dict = desc_dict
+        partial = PartialJSONSchema(**schema)
+        pageInsightData.json_schema = partial
+        return pageInsightData
 
     def __organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData]):
-        insight_list = PostsDefaultWebInsight()
+        # todo: how to convert desc_dict to bigquery column desc as activity/click have 1 to many relation ???
+
+        desc_dict = {}
+        postsWebInsight = PostsWebInsightData()
         # for post_composite_data in posts_data:
         for i, post_composite_data in enumerate(posts_data):
             insight = PostDefaultWebInsight()
-            insight_list.posts.append(insight)
+            postsWebInsight.data.append(insight)
             insight_data = post_composite_data.insight_data
             for post_inisght_data in insight_data:
 
                 key = post_inisght_data.name
+                desc_dict[key] = post_inisght_data.description
 
                 # list of InsightsValue.
                 value_obj = post_inisght_data.values[0]
@@ -512,6 +561,7 @@ class FBPageInsight:
             insight_data_complement = post_composite_data.insight_data_complement
             for post_inisght_data in insight_data_complement:
                 key = post_inisght_data.name
+                desc_dict[key] = post_inisght_data.description
                 if key == PostDetailMetric.post_activity_by_action_type.name:
                     data = post_inisght_data.values[0].value
                     # on web, this value = sum(on post + on shares) but no api to get sub part
@@ -519,9 +569,9 @@ class FBPageInsight:
                     # value["comments"] = data.comment
                     # value["shares"] = data.share
                     # try:
-                    insight.likes = data.get('like')
-                    insight.comments = data.get('comment')
-                    insight.shares = data.get('share')
+                    insight.likes = data.like  # data.get('like')
+                    insight.comments = data.comment  # data.get('comment')
+                    insight.shares = data.share  # data.get('share')
                     # except:
                     #     print(
                     #         "it is a hard handle case for union + empty data, it would use PostClickValue")
@@ -529,9 +579,11 @@ class FBPageInsight:
                 elif key == PostDetailMetric.post_clicks_by_type.name:
                     data = post_inisght_data.values[0].value
 
-                    insight.photo_views = data.get('photo view')
-                    insight.link_clicks = data.get('link clicks')
-                    insight.other_clicks = data.get('other clicks')
+                    insight.photo_views = data.photo_view  # get('photo view')
+                    # get('link clicks')
+                    insight.link_clicks = data.link_clicks
+                    # get('other clicks')
+                    insight.other_clicks = data.other_clicks
 
                     # except:
                     #print("it is a hard handle case for union")
@@ -540,8 +592,9 @@ class FBPageInsight:
                     # TODO: add it later when we figure its data shape
                     # 1. not sure whether web use this or below
                     # 2. always see no data, empty {}
-                    value_obj = post_inisght_data.values[0]
-                    value_dict = value_obj.value
+                    # value_obj = post_inisght_data.values[0]
+                    # value_dict = value_obj.value
+                    pass
                 elif key == PostDetailMetric.post_negative_feedback_by_type.name:
                     pass
                 else:
@@ -574,8 +627,11 @@ class FBPageInsight:
                     #   0
                     # post_reactions_haha_total
                     #   0
-
-        return insight_list
+        schema = PostDefaultWebInsight.schema()
+        partial = PartialJSONSchema(**schema)
+        postsWebInsight.json_schema = partial
+        postsWebInsight.desc_dict = desc_dict
+        return postsWebInsight
 
     def dummy_test(self):
         return "ok"
