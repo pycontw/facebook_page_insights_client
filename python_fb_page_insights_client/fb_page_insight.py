@@ -406,7 +406,7 @@ class FBPageInsight:
         return resp
 
     # TODO: add since/until or date_preset/period
-    def get_page_default_web_insight(self, page_id, as_dict=False):
+    def get_page_default_web_insight(self, page_id, return_as_dict=False):
         page_summary = self.get_page_insights(page_id)
         page_summary_data = page_summary.data
 
@@ -415,11 +415,11 @@ class FBPageInsight:
 
         resp = self.__organize_to_web_page_data_shape(page_summary_data)
 
-        if as_dict == True:
+        if return_as_dict == True:
             return resp.dict()
         return resp
 
-    def get_post_default_web_insight(self, page_id, since_date=(2020, 9, 7), until_date=None,  as_dict=False):
+    def get_post_default_web_insight(self, page_id, since_date=(2020, 9, 7), until_date=None,  return_as_dict=False):
 
         # e.g.
         # {
@@ -469,7 +469,7 @@ class FBPageInsight:
         # organize to the data structure shown on web
         resp = self.__organize_to_web_posts_data_shape(post_composite_list)
 
-        if as_dict == True:
+        if return_as_dict == True:
             return resp.dict()
         return resp
 
