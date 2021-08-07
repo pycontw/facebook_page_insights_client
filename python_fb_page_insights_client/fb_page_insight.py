@@ -237,6 +237,12 @@ class PageWebInsightData(BaseModel):
 
 
 class PostDefaultWebInsight(BaseModel):
+
+    period: str = Period.week.lifetime.name
+
+    # NOTE: this is injected, not in return data of fb page insight api request
+    query_time: int = None
+
     reach: int = None
     engagement_post_clicks: int = None
     engagement_activity: int = None
@@ -253,8 +259,8 @@ class PostDefaultWebInsight(BaseModel):
 
 
 class PostsWebInsightData(BaseModel):
-    query_time: Optional[int]
-    period: str = Period.week.lifetime.name
+    # query_time: Optional[int]
+    # period: str = Period.week.lifetime.name
     data: List[PostDefaultWebInsight] = []
     json_schema: Optional[PartialJSONSchema]
     # used_metric_desc_dict: Optional[Dict[str, str]]
@@ -501,8 +507,9 @@ class FBPageInsight(BaseSettings):
         #                                              posts=post_composite_list)
 
         # organize to the data structure shown on web
-        resp = self._organize_to_web_posts_data_shape(post_composite_list)
-        resp.query_time = query_time
+        resp = self._organize_to_web_posts_data_shape(
+            post_composite_list, query_time)
+        # resp.query_time = query_time
         if return_as_dict == True:
             return resp.dict()
         return resp
@@ -561,13 +568,14 @@ class FBPageInsight(BaseSettings):
         pageInsightData.json_schema = partial
         return pageInsightData
 
-    def _organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData]):
+    def _organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData], query_time: int):
 
         # desc_dict = {}
         postsWebInsight = PostsWebInsightData()
         # for post_composite_data in posts_data:
         for i, post_composite_data in enumerate(posts_data):
             insight = PostDefaultWebInsight()
+            insight.query_time = query_time
             postsWebInsight.data.append(insight)
             insight_data = post_composite_data.insight_data
             for post_inisght_data in insight_data:
