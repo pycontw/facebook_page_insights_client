@@ -201,7 +201,7 @@ class PostCompositeData(BaseModel):
 
 class PageDefaultWebInsight(BaseModel):
     period: str = None
-    end_time: str = None
+    end_time: int = None
 
     actions_on_page: int = None
     page_views: int = None
@@ -278,8 +278,8 @@ class FBPageInsight(BaseSettings):
     api_server = 'https://graph.facebook.com'
     api_version = 'v10.0'
 
-    class Config:
-        env_file = ".env"
+    # class Config:
+    #     env_file = ".env"
 
     @property
     def api_url(self):
