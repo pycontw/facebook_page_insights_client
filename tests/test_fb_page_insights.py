@@ -1,8 +1,5 @@
-from python_fb_page_insights_client import FBPageInsight, PageWebInsightData, PostMetric, PageMetric, PostDetailMetric, PostsWebInsightData, PageDefaultWebInsight
+from python_fb_page_insights_client import FBPageInsight, PageWebInsightData, PostsWebInsightData, PageDefaultWebInsight, DatePreset, Period
 import unittest
-import os
-
-from dotenv import load_dotenv
 
 
 class TestStringMethods(unittest.TestCase):
@@ -13,23 +10,14 @@ class TestStringMethods(unittest.TestCase):
         pass
 
     def test_insight(self):
-        load_dotenv()
-        user_access_token = os.getenv('user_access_token')
-        fb_app_id = os.getenv('fb_app_id')
-        fb_app_secret = os.getenv('fb_app_secret')
-        args = {
-            'user_access_token': user_access_token,
-            'fb_app_id': fb_app_id,
-            'fb_app_secret': fb_app_secret
-        }
-        pycontw_page_id = '160712400714277'
-        fb = FBPageInsight(**args)
+
+        fb = FBPageInsight()
 
         page_insight: PageWebInsightData = fb.get_page_default_web_insight(
-            pycontw_page_id)
+            date_preset=DatePreset.last_7d, period=Period.day, since=1627901347, until=1628246947)
 
         posts_insight: PostsWebInsightData = fb.get_post_default_web_insight(
-            pycontw_page_id, until_date=(2020, 11, 15))
+            until_date=(2020, 11, 15))
 
         self.assertEqual("ok", "ok")
 

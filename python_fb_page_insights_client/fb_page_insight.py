@@ -1,13 +1,15 @@
 from typing import List, Optional, Union, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BaseSettings, Field
 from enum import Enum, auto
-from dataclasses import dataclass, field
+# from dataclasses import dataclass, field
 import time
 import datetime
 
 import http.client
 import requests
 import logging
+
+# debug only
 logging.basicConfig(level=logging.DEBUG)
 http.client.HTTPConnection.debuglevel = 1
 
@@ -43,7 +45,7 @@ class Period(Enum):
 
 
 class QueryKey(Enum):
-    """ todo: not used, just prepare, add it later"""
+    """ TODO: not used, just prepare, add it later"""
     grant_type = auto()
     client_id = auto()
     client_secret = auto()
@@ -56,7 +58,7 @@ class QueryKey(Enum):
 
 
 class QueryValue(Enum):
-    """ todo: not used, just prepare, add it later"""
+    """ TODO: not used, just prepare, add it later"""
     fb_exchange_token = auto()
 
 
@@ -113,7 +115,7 @@ class ByTypeValue(BaseModel):
 
 
 class InsightsValue(BaseModel):
-    # TODO: how to handle union?
+    # BUG (pydantic): how to handle union?
     # Dict is for post_negative_feedback_by_type_unique/post_negative_feedback_by_type part
     # remove PostActivityValue, PostClickValue in union since pydantic has bugs
     # when dealing with union, https://github.com/samuelcolvin/pydantic/issues/2941
@@ -263,52 +265,70 @@ class LongLivedResponse(BaseModel):
     token_type: str
 
 
-@dataclass
-class FBPageInsight:
-    fb_app_id: str = ""
-    fb_app_secret: str = ""
-    user_access_token: str = ""
-    page_access_token: str = ""
+class FBPageInsight(BaseSettings):
+    fb_page_access_token_dict: Optional[Dict[str, str]]
+    fb_app_id = ""
+    fb_app_secret = ""
+    fb_user_access_token = ""
+    fb_default_page_id = ""
+    fb_default_page_access_token = ""
+
     # https://developers.facebook.com/docs/graph-api/reference/v10.0/insights
-    api_server: str = field(init=False, default='https://graph.facebook.com')
+    # field(init=False, default='https://graph.facebook.com')
+    api_server = 'https://graph.facebook.com'
     api_version = 'v10.0'
 
-    def __post_init__(self):
-        pass
+    class Config:
+        env_file = ".env"
 
     @property
     def api_url(self):
         return f'{self.api_server}/{self.api_version}'
 
-    # TODO: page_token is doable, too?
-    def get_long_lived_token(self):
-        if self.user_access_token == "" or self.fb_app_id == "" or self.fb_app_secret == "":
+    # TODO:
+    # 1. page_token is doable, too?
+    def get_long_lived_user_token(self):
+        if self.fb_user_access_token == "" or self.fb_app_id == "" or self.fb_app_secret == "":
             return ""
-        url = f'{self.api_url}/oauth/access_token?grant_type=fb_exchange_token&client_id={self.fb_app_id}&client_secret={self.fb_app_secret}&fb_exchange_token={self.user_access_token}'
+        url = f'{self.api_url}/oauth/access_token?grant_type=fb_exchange_token&client_id={self.fb_app_id}&client_secret={self.fb_app_secret}&fb_exchange_token={self.fb_user_access_token}'
         r = requests.get(url)
         json_dict = r.json()
         resp = LongLivedResponse(**json_dict)
         if resp.access_token != None:
-            self.user_access_token = resp.access_token
+            self.fb_user_access_token = resp.access_token
             return resp.access_token
         else:
             return ""
 
     # TODO: better way to refresh token instead of getting all pages' tokens?
-    def get_page_tokens(self, target_page_id=""):
-        if self.user_access_token == "":
-            return ""
-        url = f'{self.api_url}/me/accounts?access_token={self.user_access_token}'
+    def get_page_token(self, target_page_id):
+        if self.fb_user_access_token == "":
+            if self.fb_default_page_access_token != "":
+                # only use pre-defined page_token when user_token is not present
+                return self.fb_default_page_access_token
+            else:
+                raise ValueError(
+                    "fb_user_access_token should be assigned first")
+
+        if target_page_id == None or target_page_id == "":
+            raise ValueError("target_page_id should be a non empty string")
+        if self.fb_page_access_token_dict == None:
+            self.fb_page_access_token_dict = {}
+        page_token = self.fb_page_access_token_dict.get(target_page_id)
+        if page_token != None:
+            return page_token
+
+        url = f'{self.api_url}/me/accounts?access_token={self.fb_user_access_token}'
         r = requests.get(url)
         json_dict = r.json()
         resp = AccountResponse(**json_dict)
         if resp.data != None and len(resp.data) > 0:
             for data in resp.data:
                 if data.access_token != None and data.id == target_page_id:
+                    self.fb_page_access_token_dict[target_page_id] = data.access_token
                     return data.access_token
         return ""
 
-    # TODO: add since/until (e.g. since=1620802800&until=1620975600)
     def compose_insight_api_request(self, token, object_id, endpoint, param_dict: Dict[str, str] = {}):
         params = self._convert_para_dict(param_dict)
         url = f'{self.api_url}/{object_id}/{endpoint}?access_token={token}{params}'
@@ -332,11 +352,14 @@ class FBPageInsight:
                 metric_value += ","+metric.name
         return metric_value
 
-    def get_page_insights(self, page_id,
+    def get_page_insights(self, page_id=None,
                           user_defined_metric_list: List[PageMetric] = [],
                           since: int = 0, until: int = 0,
                           date_preset: DatePreset = DatePreset.yesterday,
                           period: Period = Period.week):
+        if page_id == None:
+            page_id = self.fb_default_page_id
+        page_token = self.get_page_token(page_id)
 
         # TODO:
         # 1. validate parameters
@@ -346,11 +369,6 @@ class FBPageInsight:
             user_defined_metric_list = [e for e in PageMetric]
         metric_value = self._convert_metric_list(user_defined_metric_list)
 
-        page_token = ""
-        if self.page_access_token == "":
-            page_token = self.get_page_tokens(page_id)
-        else:
-            page_token = self.page_access_token
         if since != 0 and until != 0:
             json_dict = self.compose_insight_api_request(page_token,
                                                          page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name, "since": since, "until": until})
@@ -361,14 +379,13 @@ class FBPageInsight:
         resp = InsightsResponse(**json_dict)
         return resp
 
-    # todo: handle until is smaller than since
-    def get_recent_posts(self, page_id, since: int = 0, until: int = 0):
+    # TODO: handle until is smaller than since
+    def get_recent_posts(self, page_id=None, since: int = 0, until: int = 0):
         # could use page_token or user_access_token
-        page_token = ""
-        if self.page_access_token == "":
-            page_token = self.get_page_tokens(page_id)
-        else:
-            page_token = self.page_access_token
+
+        if page_id == None:
+            page_id = self.fb_default_page_id
+        page_token = self.get_page_token(page_id)
 
         # get_all = False
         next_url = ""
@@ -406,19 +423,14 @@ class FBPageInsight:
             metric_list = user_defined_metric_list
         metric_value = self._convert_metric_list(metric_list)
 
-        # TODO: refactor this part
-        page_token = ""
-        if self.page_access_token == "":
-            page_token = self.get_page_tokens(page_id)
-        else:
-            page_token = self.page_access_token
+        page_token = self.get_page_token(page_id)
 
         json_dict = self.compose_insight_api_request(page_token,
                                                      post_id, "insights", {"metric": metric_value})
         resp = InsightsResponse(**json_dict)
         return resp
 
-    def get_page_default_web_insight(self, page_id, since: int = 0, until: int = 0,
+    def get_page_default_web_insight(self, page_id=None, since: int = 0, until: int = 0,
                                      date_preset: DatePreset = DatePreset.yesterday,
                                      period: Period = Period.week, return_as_dict=False):
         """ period can not be lifetime"""
@@ -440,7 +452,7 @@ class FBPageInsight:
             return resp.dict()
         return resp
 
-    def get_post_default_web_insight(self, page_id, since_date=(2020, 9, 7), until_date=None,  return_as_dict=False):
+    def get_post_default_web_insight(self, page_id=None, since_date=(2020, 9, 7), until_date=None,  return_as_dict=False):
 
         query_time = int(time.time())
         # e.g.
@@ -501,10 +513,6 @@ class FBPageInsight:
 
         insight_dict: Dict[int:PageDefaultWebInsight] = {}
 
-        # insight = PageDefaultWebInsight()
-        # desc_dict = {}
-
-        # resp = {}
         for page_insight_data in page_data:
             key = page_insight_data.name
             period = page_insight_data.period  # should be the same one
@@ -554,7 +562,6 @@ class FBPageInsight:
         return pageInsightData
 
     def _organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData]):
-        # todo: how to convert desc_dict to bigquery column desc as activity/click have 1 to many relation ???
 
         # desc_dict = {}
         postsWebInsight = PostsWebInsightData()
@@ -635,6 +642,3 @@ class FBPageInsight:
         postsWebInsight.json_schema = partial
         # postsWebInsight.used_metric_desc_dict = desc_dict
         return postsWebInsight
-
-    def dummy_test(self):
-        return "ok"
