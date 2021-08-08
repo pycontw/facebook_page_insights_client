@@ -1,4 +1,4 @@
-from python_fb_page_insights_client import FBPageInsight, PageWebInsightData, PostsWebInsightData, PageDefaultWebInsight, DatePreset, Period
+from python_fb_page_insights_client import FBPageInsight, PageWebInsightData, PostsWebInsightData, DatePreset, Period
 import unittest
 
 

@@ -120,7 +120,7 @@ class InsightsValue(BaseModel):
     # remove PostActivityValue, PostClickValue in union since pydantic has bugs
     # when dealing with union, https://github.com/samuelcolvin/pydantic/issues/2941
     value: Union[int, ByTypeValue] = None
-    #value: PostActivityValue
+    # value: PostActivityValue
 
     # if period is lifetime, end_time will not appear here
     end_time: Optional[str]
@@ -179,7 +179,8 @@ class AccountResponse(BaseModel):
 class PostData(BaseModel):
     created_time: str
     message: Optional[str]  # either message or story
-    story: Optional[str]  # "story": "PyCon Taiwan 更新了封面相片。",
+    # "story": "PyCon Taiwan 更新了封面相片。", or "PyCon Taiwan updated their status."
+    story: Optional[str]
     id: str
 
 
@@ -231,8 +232,8 @@ class PartialJSONSchema(BaseModel):
 
 
 class PageWebInsightData(BaseModel):
-    data: Optional[List[PageDefaultWebInsight]]
-    json_schema: Optional[PartialJSONSchema]
+    insight_list: Optional[List[PageDefaultWebInsight]]
+    insight_json_schema: Optional[PartialJSONSchema]
     # used_metric_desc_dict: Optional[Dict[str, str]]
 
 
@@ -242,6 +243,8 @@ class PostDefaultWebInsight(BaseModel):
 
     # NOTE: this is injected, not in return data of fb page insight api request
     query_time: int = None
+
+    post_id: str = None
 
     reach: int = None
     engagement_post_clicks: int = None
@@ -261,9 +264,12 @@ class PostDefaultWebInsight(BaseModel):
 class PostsWebInsightData(BaseModel):
     # query_time: Optional[int]
     # period: str = Period.week.lifetime.name
-    data: List[PostDefaultWebInsight] = []
-    json_schema: Optional[PartialJSONSchema]
+    insight_list: List[PostDefaultWebInsight] = []
+    insight_json_schema: Optional[PartialJSONSchema]
     # used_metric_desc_dict: Optional[Dict[str, str]]
+
+    post_list: List[PostData] = []
+    post_json_schema: Optional[PartialJSONSchema]
 
 
 class LongLivedResponse(BaseModel):
@@ -335,7 +341,7 @@ class FBPageInsight(BaseSettings):
                     return data.access_token
         return ""
 
-    def compose_insight_api_request(self, token, object_id, endpoint, param_dict: Dict[str, str] = {}):
+    def compose_fb_graph_api_request(self, token, object_id, endpoint, param_dict: Dict[str, str] = {}):
         params = self._convert_para_dict(param_dict)
         url = f'{self.api_url}/{object_id}/{endpoint}?access_token={token}{params}'
         r = requests.get(url)
@@ -360,7 +366,7 @@ class FBPageInsight(BaseSettings):
 
     def get_page_insights(self, page_id=None,
                           user_defined_metric_list: List[PageMetric] = [],
-                          since: int = 0, until: int = 0,
+                          since: int = None, until: int = None,
                           date_preset: DatePreset = DatePreset.yesterday,
                           period: Period = Period.week):
         if page_id == None:
@@ -375,18 +381,18 @@ class FBPageInsight(BaseSettings):
             user_defined_metric_list = [e for e in PageMetric]
         metric_value = self._convert_metric_list(user_defined_metric_list)
 
-        if since != 0 and until != 0:
-            json_dict = self.compose_insight_api_request(page_token,
-                                                         page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name, "since": since, "until": until})
+        if since != None and until != None:
+            json_dict = self.compose_fb_graph_api_request(page_token,
+                                                          page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name, "since": since, "until": until})
         else:
-            json_dict = self.compose_insight_api_request(page_token,
-                                                         page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
+            json_dict = self.compose_fb_graph_api_request(page_token,
+                                                          page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
 
         resp = InsightsResponse(**json_dict)
         return resp
 
     # TODO: handle until is smaller than since
-    def get_recent_posts(self, page_id=None, since: int = 0, until: int = 0):
+    def get_posts(self, page_id=None, since: int = None, until: int = None):
         # could use page_token or user_access_token
 
         if page_id == None:
@@ -398,13 +404,13 @@ class FBPageInsight(BaseSettings):
         post_data_list: List[PostData] = []
         while next_url != None:
             if next_url == "":
-                if since != 0 and until != 0:
-                    json_dict = self.compose_insight_api_request(page_token,
-                                                                 # {"since": 1601555261, "until": 1625489082})
-                                                                 page_id, "posts", {"since": since, "until": until})
+                if since != None and until != None:
+                    json_dict = self.compose_fb_graph_api_request(page_token,
+                                                                  # {"since": 1601555261, "until": 1625489082})
+                                                                  page_id, "posts", {"since": since, "until": until})
                 else:
-                    json_dict = self.compose_insight_api_request(page_token,
-                                                                 page_id, "posts")
+                    json_dict = self.compose_fb_graph_api_request(page_token,
+                                                                  page_id, "posts")
                 resp = PostsResponse(**json_dict)
             else:
                 r = requests.get(next_url)
@@ -431,12 +437,12 @@ class FBPageInsight(BaseSettings):
 
         page_token = self.get_page_token(page_id)
 
-        json_dict = self.compose_insight_api_request(page_token,
-                                                     post_id, "insights", {"metric": metric_value})
+        json_dict = self.compose_fb_graph_api_request(page_token,
+                                                      post_id, "insights", {"metric": metric_value})
         resp = InsightsResponse(**json_dict)
         return resp
 
-    def get_page_default_web_insight(self, page_id=None, since: int = 0, until: int = 0,
+    def get_page_default_web_insight(self, page_id=None, since: int = None, until: int = None,
                                      date_preset: DatePreset = DatePreset.yesterday,
                                      period: Period = Period.week, return_as_dict=False):
         """ period can not be lifetime"""
@@ -483,10 +489,10 @@ class FBPageInsight(BaseSettings):
             until = int(time.mktime(
                 datetime.datetime(*until_date).timetuple()))
 
-        recent_posts = self.get_recent_posts(page_id, since, until)
+        recent_posts = self.get_posts(page_id, since, until)
         posts_data = recent_posts.data
 
-        post_composite_list = []
+        post_composite_list: List[PostCompositeData] = []
         # iterate each post
         for post in posts_data:
             composite_data = PostCompositeData(meta=post)
@@ -515,7 +521,7 @@ class FBPageInsight(BaseSettings):
         return resp
 
     def _organize_to_web_page_data_shape(self, page_data: List[InsightData]):
-        """ currently it only support one period, it querying with on specific period in low level api, 
+        """ currently it only support one period, it querying with on specific period in low level api,
             will return multiple periods """
 
         insight_dict: Dict[int:PageDefaultWebInsight] = {}
@@ -560,12 +566,11 @@ class FBPageInsight(BaseSettings):
             # id: str
             # values: List[InsightsValue]
 
-        schema = PageDefaultWebInsight.schema()
         pageInsightData = PageWebInsightData()
-        pageInsightData.data = list(insight_dict.values())
+        pageInsightData.insight_list = list(insight_dict.values())
         # pageInsightData.used_metric_desc_dict = desc_dict
-        partial = PartialJSONSchema(**schema)
-        pageInsightData.json_schema = partial
+        pageInsightData.insight_json_schema = PartialJSONSchema(
+            **PageDefaultWebInsight.schema())
         return pageInsightData
 
     def _organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData], query_time: int):
@@ -576,8 +581,12 @@ class FBPageInsight(BaseSettings):
         for i, post_composite_data in enumerate(posts_data):
             insight = PostDefaultWebInsight()
             insight.query_time = query_time
-            postsWebInsight.data.append(insight)
             insight_data = post_composite_data.insight_data
+            insight.post_id = post_composite_data.meta.id
+
+            postsWebInsight.insight_list.append(insight)
+            postsWebInsight.post_list.append(post_composite_data.meta)
+
             for post_inisght_data in insight_data:
 
                 key = post_inisght_data.name
@@ -645,8 +654,10 @@ class FBPageInsight(BaseSettings):
                     #   0
                     # post_reactions_haha_total
                     #   0
-        schema = PostDefaultWebInsight.schema()
-        partial = PartialJSONSchema(**schema)
-        postsWebInsight.json_schema = partial
+        postsWebInsight.insight_json_schema = PartialJSONSchema(
+            **PostDefaultWebInsight.schema())
+        postsWebInsight.post_json_schema = PartialJSONSchema(
+            **PostData.schema())
+
         # postsWebInsight.used_metric_desc_dict = desc_dict
         return postsWebInsight
