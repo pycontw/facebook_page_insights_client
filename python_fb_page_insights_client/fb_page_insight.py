@@ -1,9 +1,9 @@
+from datetime import datetime
 from typing import List, Optional, Union, Dict
-from pydantic import BaseModel, BaseSettings, Field
+from pydantic import BaseModel, BaseSettings, Field, validator
 from enum import Enum, auto
 # from dataclasses import dataclass, field
 import time
-import datetime
 
 import http.client
 import requests
@@ -178,7 +178,7 @@ class AccountResponse(BaseModel):
 
 class PostData(BaseModel):
     id: str
-    created_time: str
+    created_time: datetime
     message: Optional[str]  # either message or story
     # "story": "PyCon Taiwan 更新了封面相片。", or "PyCon Taiwan updated their status."
     story: Optional[str]
@@ -196,6 +196,7 @@ class PostsResponse(BaseModel):
 
 
 class PostCompositeData(BaseModel):
+    # TODO: meta might not be a good name
     meta: PostData
     insight_data: Optional[List[InsightData]]
     insight_data_complement: Optional[List[InsightData]]
@@ -203,7 +204,7 @@ class PostCompositeData(BaseModel):
 
 class PageDefaultWebInsight(BaseModel):
     page_id: str
-    end_time: int = None
+    end_time: datetime = None
     period: str = None
 
     actions_on_page: int = None
@@ -244,7 +245,7 @@ class PostDefaultWebInsight(BaseModel):
     post_id: str = None
 
     # NOTE: this is injected, not in return data of fb page insight api request
-    query_time: int = None
+    query_time: datetime = None
 
     period: str = Period.week.lifetime.name
 
@@ -488,13 +489,13 @@ class FBPageInsight(BaseSettings):
         # if force_2021_whole_year:
         # first_day_next_month = datetime.datetime(2021, 1, 1)
         # e.g. 1609430400
-        since = int(time.mktime(datetime.datetime(*since_date).timetuple()))
+        since = int(time.mktime(datetime(*since_date).timetuple()))
 
         if until_date == None:
             until = query_time  # int(time.time())  # 1627209209
         else:
             until = int(time.mktime(
-                datetime.datetime(*until_date).timetuple()))
+                datetime(*until_date).timetuple()))
 
         recent_posts = self.get_posts(page_id, since, until)
         posts_data = recent_posts.data
@@ -539,15 +540,17 @@ class FBPageInsight(BaseSettings):
             # value_obj is union
             for value_obj in page_insight_data.values:
                 value = value_obj.value
+                end_time = value_obj.end_time
                 # e.g. '2021-08-07T07:00:00+0000'
-                end_time = int(datetime.datetime.strptime(
-                    value_obj.end_time, '%Y-%m-%dT%H:%M:%S+%f').timestamp())
+                # end_time_int = int(datetime.strptime(
+                #     value_obj.end_time, '%Y-%m-%dT%H:%M:%S+%f').timestamp())
                 insight = insight_dict.get(end_time)
                 if insight == None:
-                    insight = PageDefaultWebInsight(page_id=page_id)
+                    insight = PageDefaultWebInsight(
+                        period=period, page_id=page_id, end_time=end_time)
                     insight_dict[end_time] = insight
-                    insight.period = period
-                    insight.end_time = end_time
+                    # insight.period = period
+                    # insight.end_time = end_time
                 if key == PageMetric.page_total_actions.name:
                     insight.actions_on_page = value
                 elif key == PageMetric.page_views_total.name:
@@ -586,8 +589,8 @@ class FBPageInsight(BaseSettings):
         postsWebInsight = PostsWebInsightData()
         # for post_composite_data in posts_data:
         for i, post_composite_data in enumerate(posts_data):
-            insight = PostDefaultWebInsight()
-            insight.query_time = query_time
+            insight = PostDefaultWebInsight(query_time=query_time)
+            # insight.query_time = query_time <- will not convert to datetime !
             insight_data = post_composite_data.insight_data
             insight.post_id = post_composite_data.meta.id
 
