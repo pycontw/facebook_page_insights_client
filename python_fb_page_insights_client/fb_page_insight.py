@@ -178,11 +178,19 @@ class AccountResponse(BaseModel):
 
 class PostData(BaseModel):
     id: str
-    created_time: datetime
+    # e.g. 2021-08-07T07:00:00+0000
+    created_time: str = Field(
+        format='date-time'
+    )
     message: Optional[str]  # either message or story
     # "story": "PyCon Taiwan 更新了封面相片。", or "PyCon Taiwan updated their status."
     story: Optional[str]
     page_id: Optional[str]
+
+    @validator('created_time')
+    def set_created_time(cls, v):
+        return datetime.strptime(
+            v, '%Y-%m-%dT%H:%M:%S+%f').isoformat()
 
 
 class PostsPaging(BaseModel):
@@ -204,7 +212,9 @@ class PostCompositeData(BaseModel):
 
 class PageDefaultWebInsight(BaseModel):
     page_id: str
-    end_time: datetime = None
+    end_time: str = Field(
+        format='date-time'
+    )
     period: str = None
 
     actions_on_page: int = None
@@ -214,6 +224,11 @@ class PageDefaultWebInsight(BaseModel):
     videos: int = None
     page_followers: int = None
     post_reach: int = None
+
+    @validator('end_time')
+    def set_end_time(cls, v):
+        return datetime.strptime(
+            v, '%Y-%m-%dT%H:%M:%S+%f').isoformat()
 
 
 class PartialJSONSchema(BaseModel):
@@ -245,7 +260,8 @@ class PostDefaultWebInsight(BaseModel):
     post_id: str = None
 
     # NOTE: this is injected, not in return data of fb page insight api request
-    query_time: datetime = None
+    query_time: str = Field(None,
+                            format='date-time')
 
     period: str = Period.week.lifetime.name
 
@@ -474,7 +490,7 @@ class FBPageInsight(BaseSettings):
 
     def get_post_default_web_insight(self, page_id=None, since_date=(2020, 9, 7), until_date=None,  return_as_dict=False):
 
-        query_time = int(time.time())
+        query_time = datetime.now()  # int(time.time())
         # e.g.
         # {
         #   "data": [
@@ -492,7 +508,8 @@ class FBPageInsight(BaseSettings):
         since = int(time.mktime(datetime(*since_date).timetuple()))
 
         if until_date == None:
-            until = query_time  # int(time.time())  # 1627209209
+            # int(time.time())  # 1627209209
+            until = int(query_time.timestamp())
         else:
             until = int(time.mktime(
                 datetime(*until_date).timetuple()))
@@ -542,8 +559,8 @@ class FBPageInsight(BaseSettings):
                 value = value_obj.value
                 end_time = value_obj.end_time
                 # e.g. '2021-08-07T07:00:00+0000'
-                # end_time_int = int(datetime.strptime(
-                #     value_obj.end_time, '%Y-%m-%dT%H:%M:%S+%f').timestamp())
+                # end_time = datetime.strptime(
+                #     value_obj.end_time, '%Y-%m-%dT%H:%M:%S+%f').isoformat()  # .timestamp())
                 insight = insight_dict.get(end_time)
                 if insight == None:
                     insight = PageDefaultWebInsight(
@@ -583,14 +600,13 @@ class FBPageInsight(BaseSettings):
             **PageDefaultWebInsight.schema())
         return pageInsightData
 
-    def _organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData], query_time: int):
+    def _organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData], query_time: datetime):
 
-        # desc_dict = {}
         postsWebInsight = PostsWebInsightData()
         # for post_composite_data in posts_data:
         for i, post_composite_data in enumerate(posts_data):
-            insight = PostDefaultWebInsight(query_time=query_time)
-            # insight.query_time = query_time <- will not convert to datetime !
+            insight = PostDefaultWebInsight(query_time=query_time.isoformat())
+            # insight.query_time = query_time <- this way will not trigger any @validator
             insight_data = post_composite_data.insight_data
             insight.post_id = post_composite_data.meta.id
 
