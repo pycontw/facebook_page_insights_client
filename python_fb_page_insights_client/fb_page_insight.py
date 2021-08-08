@@ -127,12 +127,12 @@ class InsightsValue(BaseModel):
 
 
 class InsightData(BaseModel):
+    id: str
     name: str
     period: str
     values: List[InsightsValue]
     title: Optional[str]  # might be json null
     description: str
-    id: str
 
 
 class InsightsCursors(BaseModel):
@@ -177,11 +177,12 @@ class AccountResponse(BaseModel):
 
 
 class PostData(BaseModel):
+    id: str
     created_time: str
     message: Optional[str]  # either message or story
     # "story": "PyCon Taiwan 更新了封面相片。", or "PyCon Taiwan updated their status."
     story: Optional[str]
-    id: str
+    page_id: Optional[str]
 
 
 class PostsPaging(BaseModel):
@@ -201,8 +202,9 @@ class PostCompositeData(BaseModel):
 
 
 class PageDefaultWebInsight(BaseModel):
-    period: str = None
+    page_id: str
     end_time: int = None
+    period: str = None
 
     actions_on_page: int = None
     page_views: int = None
@@ -239,12 +241,12 @@ class PageWebInsightData(BaseModel):
 
 class PostDefaultWebInsight(BaseModel):
 
-    period: str = Period.week.lifetime.name
+    post_id: str = None
 
     # NOTE: this is injected, not in return data of fb page insight api request
     query_time: int = None
 
-    post_id: str = None
+    period: str = Period.week.lifetime.name
 
     reach: int = None
     engagement_post_clicks: int = None
@@ -369,8 +371,7 @@ class FBPageInsight(BaseSettings):
                           since: int = None, until: int = None,
                           date_preset: DatePreset = DatePreset.yesterday,
                           period: Period = Period.week):
-        if page_id == None:
-            page_id = self.fb_default_page_id
+        page_id = self._page_id(page_id)
         page_token = self.get_page_token(page_id)
 
         # TODO:
@@ -394,9 +395,7 @@ class FBPageInsight(BaseSettings):
     # TODO: handle until is smaller than since
     def get_posts(self, page_id=None, since: int = None, until: int = None):
         # could use page_token or user_access_token
-
-        if page_id == None:
-            page_id = self.fb_default_page_id
+        page_id = self._page_id(page_id)
         page_token = self.get_page_token(page_id)
 
         # get_all = False
@@ -418,6 +417,8 @@ class FBPageInsight(BaseSettings):
                 resp = PostsResponse(**json_dict)
             next_url = resp.paging.next
             post_data_list += resp.data
+        for post in post_data_list:
+            post.page_id = page_id
         total_resp = PostsResponse(data=post_data_list, paging=resp.paging)
         return total_resp
 
@@ -442,11 +443,16 @@ class FBPageInsight(BaseSettings):
         resp = InsightsResponse(**json_dict)
         return resp
 
+    def _page_id(self, page_id):
+        if page_id == None:
+            return self.fb_default_page_id
+        return page_id
+
     def get_page_default_web_insight(self, page_id=None, since: int = None, until: int = None,
                                      date_preset: DatePreset = DatePreset.yesterday,
                                      period: Period = Period.week, return_as_dict=False):
         """ period can not be lifetime"""
-
+        page_id = self._page_id(page_id)
         if period == Period.lifetime:
             raise ValueError(
                 'period can not be lifetime when querying default page insight')
@@ -458,7 +464,8 @@ class FBPageInsight(BaseSettings):
         # page_composite_data = PagePostsCompositeData(
         #     fetch_time=int(time.time()), page=page_summary_data)
 
-        resp = self._organize_to_web_page_data_shape(page_summary_data)
+        resp = self._organize_to_web_page_data_shape(
+            page_summary_data, page_id)
 
         if return_as_dict == True:
             return resp.dict()
@@ -520,7 +527,7 @@ class FBPageInsight(BaseSettings):
             return resp.dict()
         return resp
 
-    def _organize_to_web_page_data_shape(self, page_data: List[InsightData]):
+    def _organize_to_web_page_data_shape(self, page_data: List[InsightData], page_id: str):
         """ currently it only support one period, it querying with on specific period in low level api,
             will return multiple periods """
 
@@ -537,7 +544,7 @@ class FBPageInsight(BaseSettings):
                     value_obj.end_time, '%Y-%m-%dT%H:%M:%S+%f').timestamp())
                 insight = insight_dict.get(end_time)
                 if insight == None:
-                    insight = PageDefaultWebInsight()
+                    insight = PageDefaultWebInsight(page_id=page_id)
                     insight_dict[end_time] = insight
                     insight.period = period
                     insight.end_time = end_time
