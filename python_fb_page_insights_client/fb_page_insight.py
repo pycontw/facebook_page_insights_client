@@ -99,19 +99,22 @@ class PageMetric(Enum):
     page_impressions_organic_unique = auto()
 
 
-class ByTypeValue(BaseModel):
-    ''' since pydantic union has some bug, so combine them (intersection)'''
-
-    # PostActivityValue(BaseModel)
+class PostActivityValue(BaseModel):
     share: int = None
     like: int = None
     comment: int = None
-    # PostActivityValue(BaseModel)
+
+
+class PostClickValue(BaseModel):
     photo_view: int = Field(None, alias='photo view')
     link_clicks: int = Field(None, alias='link clicks')
     other_clicks: int = Field(None, alias='other clicks')
 
+
+class ByTypeValue(PostActivityValue, PostClickValue):
+    ''' since pydantic union has some bug, so combine them (intersection)'''
     # TODO: add more ByTypeValue, e.g. page_positive_feedback_by_type
+    pass
 
 
 class InsightsValue(BaseModel):
