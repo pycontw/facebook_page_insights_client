@@ -2,21 +2,32 @@
 
 ## Usage
 
-### Get needed secrets first
-
-You need to fill the below fields in `.env` or setup environment variables. 
-
-```
-user_access_token=
-fb_app_id=
-fb_app_secret=
-```
+## Get needed secrets first
 
 https://github.com/facebook/facebook-python-business-sdk#register-an-app is a reference and the steps are 
 1. create a FB app and get its `app_id` and `secret`, 
 2. In terms of `user_access_token`, make sure you are a registered developer of this fb app and get user access token on Graph Explorer. 
 
 Rather than Graph Explorer, https://github.com/pycontw/python-fb-page-insights-client/issues/6 introduces another way which does not to be a registered developer of this fb app. But this way is not recommanded. 
+
+### Pass secrets 
+
+After getting secrets, you need to pass below arguments to the library 
+
+```
+fb_user_access_token=
+fb_app_id=
+fb_app_secret=
+fb_default_page_id=
+fb_default_page_access_token=
+```
+
+You can choose any of below ways:
+- pass them as function paramets
+- manually export them as enviornments variables
+- create a .env to include them
+
+if fb_user_access_token is filled, fb_default_page_access_token is not necessary and will be ignored. 
 
 ## Fetch data 
 
