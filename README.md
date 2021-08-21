@@ -6,7 +6,9 @@
 
 https://github.com/facebook/facebook-python-business-sdk#register-an-app is a reference and the steps are 
 1. create a FB app and get its `app_id` and `secret`, 
-2. In terms of `user_access_token`, make sure you are a registered developer of this fb app and get user access token on Graph Explorer. 
+2. In terms of `user_access_token`, make sure you are a registered developer of this fb app and get user access token on Graph Explorer. You will get a short-term user_token by default, expired in 2 or 3 months. To get long-term token, choose either of the below ways
+    - using Graph Exploer -> Access token tool -> Extend access token
+    - invoke get_long_lived_user_token of this library 
 
 Rather than Graph Explorer, https://github.com/pycontw/python-fb-page-insights-client/issues/6 introduces another way which does not to be a registered developer of this fb app. But this way is not recommanded. 
 
