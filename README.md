@@ -29,7 +29,7 @@ You can choose any of below ways:
 - manually export them as enviornments variables
 - create a .env to include them
 
-if fb_user_access_token is filled, fb_default_page_access_token is not necessary and will be ignored. 
+if fb_user_access_token is filled, fb_default_page_access_token is not necessary and will be ignored. fb_user_access_token will be used to get page token internally. 
 
 ## Fetch data 
 
