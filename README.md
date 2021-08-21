@@ -35,6 +35,15 @@ if fb_user_access_token is filled, fb_default_page_access_token is not necessary
 
 Use `FBPageInsight` class to fetch. Please checkout the unit test code as an example. You also need to find out the fb page id and has the permission to get data, e.g. admin/analyst role.
 
+### Rate limit
+
+- [Application level limit](https://developers.facebook.com/apps/1111808169305965/rate-limit-details/app/) When using a user access token, the rate limit is 200 request per hour per token. You can check reamining quota shown in fb app dashboard, e.g. https://developers.facebook.com/apps/fb_dev_app_id]/rate-limit-details/app/
+    - api response header includes `x-app-usage`
+- [Page-Level Rate Limiting](https://developers.facebook.com/apps/1111808169305965/rate-limit-details/new_page/): for using a page token 
+    - Business Use Case (BUC) Rate Limits
+        - `Calls within one hour = 4800 * Number of Engaged Users`
+        - api response header inclues `x-business-use-case-usage`
+
 ## Development
 
 1. `poetry shell`
