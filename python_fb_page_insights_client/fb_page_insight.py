@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional, Union, Dict
 from pydantic import BaseModel, BaseSettings, Field, validator
 from enum import Enum, auto
@@ -10,8 +10,8 @@ import requests
 import logging
 
 # debug only
-logging.basicConfig(level=logging.DEBUG)
-http.client.HTTPConnection.debuglevel = 1
+# logging.basicConfig(level=logging.DEBUG)
+# http.client.HTTPConnection.debuglevel = 1
 
 
 class DatePreset(Enum):
@@ -491,7 +491,7 @@ class FBPageInsight(BaseSettings):
             return resp.dict()
         return resp
 
-    def get_post_default_web_insight(self, page_id=None, since_date=(2020, 9, 7), until_date=None,  return_as_dict=False):
+    def get_post_default_web_insight(self, page_id=None, since_date=None, until_date=None,  return_as_dict=False):
 
         query_time = datetime.now()  # int(time.time())
         # e.g.
@@ -508,12 +508,18 @@ class FBPageInsight(BaseSettings):
         # if force_2021_whole_year:
         # first_day_next_month = datetime.datetime(2021, 1, 1)
         # e.g. 1609430400
-        since = int(time.mktime(datetime(*since_date).timetuple()))
+
+        if since_date == None:
+            since_date_time = query_time - timedelta(days=365)
+            since = int(since_date_time.timestamp())
+        else:
+            since = int(time.mktime(datetime(*since_date).timetuple()))
 
         if until_date == None:
             # int(time.time())  # 1627209209
             until = int(query_time.timestamp())
         else:
+            # todo: add check if since_date is specified, throw error if not
             until = int(time.mktime(
                 datetime(*until_date).timetuple()))
 
