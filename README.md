@@ -44,6 +44,10 @@ Use `FBPageInsight` class to fetch. Please checkout the unit test code as an exa
         - `Calls within one hour = 4800 * Number of Engaged Users`
         - api response header inclues `x-business-use-case-usage`
 
+### Somehow FB will return invalid data sometimes 
+
+It is not much stable and plrease try again. 
+
 ## Development
 
 1. `poetry shell`
