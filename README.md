@@ -46,7 +46,7 @@ Use `FBPageInsight` class to fetch. Please checkout the unit test code as an exa
 
 ### Somehow FB will return invalid data sometimes 
 
-It is not much stable and plrease try again. 
+FB API is not very stable and plrease try again. 
 
 ## Development
 
