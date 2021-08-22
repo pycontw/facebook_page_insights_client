@@ -413,7 +413,7 @@ class FBPageInsight(BaseSettings):
         return resp
 
     # TODO: handle until is smaller than since
-    def get_posts(self, page_id=None, since: int = None, until: int = None):
+    def get_posts(self, page_id: str = None, since: int = None, until: int = None):
         # could use page_token or user_access_token
         page_id = self._page_id(page_id)
         page_token = self.get_page_token(page_id)
@@ -442,7 +442,7 @@ class FBPageInsight(BaseSettings):
         total_resp = PostsResponse(data=post_data_list, paging=resp.paging)
         return total_resp
 
-    def get_post_insight(self, post_id, basic_metric=True, complement_metric=True, user_defined_metric_list=[]):
+    def get_post_insight(self, post_id: str, basic_metric=True, complement_metric=True, user_defined_metric_list=[]):
         page_id = post_id.split('_')[0]
 
         if len(user_defined_metric_list) == 0:
@@ -460,15 +460,18 @@ class FBPageInsight(BaseSettings):
 
         json_dict = self.compose_fb_graph_api_request(page_token,
                                                       post_id, "insights", {"metric": metric_value})
+        # NOTE: somehow FB will return invalid api result
+        # if json_dict.get("data") == None:
+        #     print("not ok") for debugging,
         resp = InsightsResponse(**json_dict)
         return resp
 
-    def _page_id(self, page_id):
+    def _page_id(self, page_id: str):
         if page_id == None:
             return self.fb_default_page_id
         return page_id
 
-    def get_page_default_web_insight(self, page_id=None, since: int = None, until: int = None,
+    def get_page_default_web_insight(self, page_id: str = None, since: int = None, until: int = None,
                                      date_preset: DatePreset = DatePreset.yesterday,
                                      period: Period = Period.week, return_as_dict=False):
         """ period can not be lifetime"""
@@ -491,7 +494,19 @@ class FBPageInsight(BaseSettings):
             return resp.dict()
         return resp
 
-    def get_post_default_web_insight(self, page_id=None, since_date=None, until_date=None,  return_as_dict=False):
+    def get_post_default_web_insight(self, page_id: str = None, since_date: tuple[str, str, str] = None, until_date: tuple[str, str, str] = None,  between_days: int = None,  return_as_dict=False):
+        """
+            since_date and until_date are the tuple form of (2020, 9, 7)
+            if any of since_date and until_date is omitting, between_days will be used to decide either since_date or until_date and default value is 365. 
+            if since_date & until_date both are omitting, until_date will be today (now)
+            if since_date is omitting, since_date = until_date - between_days  
+            if since_date is not omitting but until_date is omitting, then until_date = since_date + between_days
+            since_date, until_date, period_days can not be all specified as non None at the same time, will throw a error 
+        """
+
+        if since_date != None and until_date != None and between_days != None:
+            raise ValueError(
+                "since_date, until_date, period_days can not all be non-None at the same time")
 
         query_time = datetime.now()  # int(time.time())
         # e.g.
@@ -509,19 +524,26 @@ class FBPageInsight(BaseSettings):
         # first_day_next_month = datetime.datetime(2021, 1, 1)
         # e.g. 1609430400
 
-        if since_date == None:
-            since_date_time = query_time - timedelta(days=365)
-            since = int(since_date_time.timestamp())
-        else:
-            since = int(time.mktime(datetime(*since_date).timetuple()))
+        if between_days == None:
+            between_days = 365
 
         if until_date == None:
-            # int(time.time())  # 1627209209
-            until = int(query_time.timestamp())
+            if since_date == None:
+                until_time = query_time
+            else:
+                since_time = datetime(
+                    *since_date)
+                until_time = since_time + timedelta(days=between_days)
         else:
-            # todo: add check if since_date is specified, throw error if not
-            until = int(time.mktime(
-                datetime(*until_date).timetuple()))
+            until_time = datetime(*until_date)
+        until = int(until_time.timestamp())
+
+        if since_date == None:
+            since_time = until_time - timedelta(days=between_days)
+        else:
+            since_time = datetime(
+                *since_date)
+        since = int(since_time.timestamp())
 
         recent_posts = self.get_posts(page_id, since, until)
         posts_data = recent_posts.data
