@@ -14,6 +14,10 @@ import logging
 # http.client.HTTPConnection.debuglevel = 1
 
 
+class Const(Enum):
+    between_days = 365
+
+
 class DatePreset(Enum):
     today = auto()
     yesterday = auto()
@@ -266,7 +270,7 @@ class PostDefaultWebInsight(BaseModel):
     query_time: str = Field(None,
                             format='date-time')
 
-    period: str = Period.week.lifetime.name
+    period: str = Period.lifetime.name
 
     reach: int = None
     engagement_post_clicks: int = None
@@ -525,7 +529,7 @@ class FBPageInsight(BaseSettings):
         # e.g. 1609430400
 
         if between_days == None:
-            between_days = 365
+            between_days = Const.between_days.value
 
         if until_date == None:
             if since_date == None:
