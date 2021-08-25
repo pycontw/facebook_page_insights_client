@@ -14,7 +14,7 @@ import logging
 # http.client.HTTPConnection.debuglevel = 1
 
 
-class Const(Enum):
+class FBPageInsightConst(Enum):
     between_days = 365
 
 
@@ -529,7 +529,7 @@ class FBPageInsight(BaseSettings):
         # e.g. 1609430400
 
         if between_days == None:
-            between_days = Const.between_days.value
+            between_days = FBPageInsightConst.between_days.value
 
         if until_date == None:
             if since_date == None:
