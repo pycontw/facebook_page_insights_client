@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List, Optional, Union, Dict
 from pydantic import BaseModel, BaseSettings, Field, validator
-from enum import Enum, auto
+from enum import Enum, auto, IntEnum
 # from dataclasses import dataclass, field
 import time
 
@@ -14,8 +14,8 @@ import logging
 # http.client.HTTPConnection.debuglevel = 1
 
 
-class FBPageInsightConst(Enum):
-    between_days = 365
+class FBPageInsightConst(IntEnum):
+    default_between_days = 365
 
 
 class DatePreset(Enum):
@@ -529,7 +529,7 @@ class FBPageInsight(BaseSettings):
         # e.g. 1609430400
 
         if between_days == None:
-            between_days = FBPageInsightConst.between_days.value
+            between_days = FBPageInsightConst.default_between_days
 
         if until_date == None:
             if since_date == None:
