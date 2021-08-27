@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Tuple
 from pydantic import BaseModel, BaseSettings, Field, validator
 from enum import Enum, auto, IntEnum
 # from dataclasses import dataclass, field
@@ -498,7 +498,7 @@ class FBPageInsight(BaseSettings):
             return resp.dict()
         return resp
 
-    def get_post_default_web_insight(self, page_id: str = None, since_date: tuple[str, str, str] = None, until_date: tuple[str, str, str] = None,  between_days: int = None,  return_as_dict=False):
+    def get_post_default_web_insight(self, page_id: str = None, since_date: Tuple[str, str, str] = None, until_date: Tuple[str, str, str] = None,  between_days: int = None,  return_as_dict=False):
         """
             since_date and until_date are the tuple form of (2020, 9, 7)
             if any of since_date and until_date is omitting, between_days will be used to decide either since_date or until_date and default value is 365. 
