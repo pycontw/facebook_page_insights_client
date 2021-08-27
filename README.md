@@ -1,16 +1,18 @@
-# Python Facebook Page Insights Client
+# Python Page Insights Client
+
+Currently, it is used by https://github.com/pycontw/pycon-etl . Check [dags/ods/fb_page_insights/udfs/fb_page_insights_data_uploader.py](https://github.com/pycontw/pycon-etl/blob/master/dags/ods/fb_page_insights/dags/fb_page_insights_2_bigquery.py) as an example of how to use this Python module.
 
 ## Usage
 
-## Get needed secrets first
+### Get needed secrets first
 
 https://github.com/facebook/facebook-python-business-sdk#register-an-app is a reference and the steps are 
 1. create a FB app and get its `app_id` and `secret`, 
-2. In terms of `user_access_token`, make sure you are a registered developer of this fb app and get user access token on Graph Explorer. You will get a short-term user_token by default, expired in 2 or 3 months. To get long-term token, choose either of the below ways
-    - using Graph Exploer -> Access token tool -> Extend access token
-    - invoke get_long_lived_user_token of this library 
+2. In terms of `user_access_token/page_access_token`, make sure you are a registered developer of this fb app, and get user_access_token or page_user_token on Graph Explorer with selected scopes, read_insights & pages_read_engagement. Either user_token or page_token is working. You will get a short-term token by default, expired in 2 or 3 months. To get long-term token, choose either of the below ways
+    - this library will automatically get the long-lived token and cache it in local db.json
+    - manually use Graph Exploer -> Access token tool -> Extend access token to get long-lived token first.
 
-Rather than Graph Explorer, https://github.com/pycontw/python-fb-page-insights-client/issues/6 introduces another way which does not to be a registered developer of this fb app. But this way is not recommanded. 
+Rather than Graph Explorer, https://github.com/pycontw/python-fb-page-insights-client/issues/6 introduces another way which does not to be a registered developer of this fb app. But this way is not recommended. 
 
 ### Pass secrets 
 
@@ -25,11 +27,13 @@ fb_default_page_access_token=
 ```
 
 You can choose any of below ways:
-- pass them as function paramets
-- manually export them as enviornments variables
+- pass them as function parameters
+- manually export them as environment variables
 - create a .env to include them
 
-if fb_user_access_token is filled, fb_default_page_access_token is not necessary and will be ignored. fb_user_access_token will be used to get page token internally. 
+if fb_default_page_access_token is filled and valid, fb_user_access_token usage will be skipped. fb_user_access_token is used to get page token internally. So you only need to fill either a valid fb_default_page_access_token or fb_user_access_token.
+
+You can skip fb_app_id and fb_app_secret if you are sure if fb_user_access_token/fb_default_page_access_token is long-lived token. In https://developers.facebook.com/tools/debug/accesstoken/, You can paste the token to check its "Expires" and "Valid" field.
 
 ## Fetch data 
 
@@ -43,10 +47,6 @@ Use `FBPageInsight` class to fetch. Please checkout the unit test code as an exa
     - Business Use Case (BUC) Rate Limits
         - `Calls within one hour = 4800 * Number of Engaged Users`
         - api response header inclues `x-business-use-case-usage`
-
-### Somehow FB will return invalid data sometimes 
-
-FB API is not very stable and plrease try again. 
 
 ## Development
 
@@ -66,4 +66,5 @@ Two methods:
 
 ## TODO:
 
-https://github.com/pycontw/python-fb-page-insights-client/discussions/4
+https://github.com/pycontw/facebook_page_insights_client/discussions/4
+
