@@ -143,14 +143,18 @@ class InsightData(BaseModel):
 
 
 class InsightsCursors(BaseModel):
-    previous: str  # similar query but add since & until
-    next: str
+    # not seen Optional case but add it just in case
+    previous: Optional[str]  # similar query but add since & until
+    # if query time range includes a future day,
+    # next will be missing
+    next: Optional[str]
 
 
 # page & post both use this
 class InsightsResponse(BaseModel):
     data: List[InsightData]
-    paging: InsightsCursors
+    # not seen Optional case but add it just in case
+    paging: Optional[InsightsCursors]
 
 
 class Category(BaseModel):
@@ -201,13 +205,15 @@ class PostData(BaseModel):
 
 
 class PostsPaging(BaseModel):
-    cursors: BeforeAfterCursors
+    # not see Optional case but add it just in case
+    cursors: Optional[BeforeAfterCursors]
     next: Optional[str]
 
 
 class PostsResponse(BaseModel):
     data: List[PostData]
-    paging: PostsPaging
+    # not see Optional case but add it just in case
+    paging: Optional[PostsPaging]
 
 
 class PostCompositeData(BaseModel):
@@ -412,7 +418,6 @@ class FBPageInsight(BaseSettings):
         else:
             json_dict = self.compose_fb_graph_api_request(page_token,
                                                           page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
-
         resp = InsightsResponse(**json_dict)
         return resp
 
@@ -475,7 +480,7 @@ class FBPageInsight(BaseSettings):
             return self.fb_default_page_id
         return page_id
 
-    def get_page_default_web_insight(self, page_id: str = None, since: int = None, until: int = None,
+    def get_page_default_web_insight(self, page_id: str = None, since_date: Tuple[str, str, str] = None, until_date: Tuple[str, str, str] = None,
                                      date_preset: DatePreset = DatePreset.yesterday,
                                      period: Period = Period.week, return_as_dict=False):
         """ period can not be lifetime"""
@@ -483,6 +488,14 @@ class FBPageInsight(BaseSettings):
         if period == Period.lifetime:
             raise ValueError(
                 'period can not be lifetime when querying default page insight')
+
+        since = None
+        until = None
+        if since_date != None and until_date != None:
+            since = int(datetime(
+                *since_date).timestamp())
+            until = int(datetime(
+                *until_date).timestamp())
 
         page_summary = self.get_page_insights(
             page_id, since=since, until=until, date_preset=date_preset, period=period)
