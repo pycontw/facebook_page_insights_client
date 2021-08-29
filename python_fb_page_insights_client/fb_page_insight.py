@@ -345,7 +345,7 @@ class FBPageInsight(BaseSettings):
             return ""
 
     # TODO: better way to refresh token instead of getting all pages' tokens?
-    def get_page_token(self, target_page_id):
+    def get_page_token(self, target_page_id: str):
         if self.fb_user_access_token == "":
             if self.fb_default_page_access_token != "":
                 # only use pre-defined page_token when user_token is not present
@@ -373,7 +373,7 @@ class FBPageInsight(BaseSettings):
                     return data.access_token
         return ""
 
-    def compose_fb_graph_api_request(self, token, object_id, endpoint, param_dict: Dict[str, str] = {}):
+    def compose_fb_graph_api_request(self, token: str, object_id: str, endpoint: str, param_dict: Dict[str, str] = {}):
         params = self._convert_para_dict(param_dict)
         url = f'{self.api_url}/{object_id}/{endpoint}?access_token={token}{params}'
         r = requests.get(url)
@@ -396,7 +396,7 @@ class FBPageInsight(BaseSettings):
                 metric_value += ","+metric.name
         return metric_value
 
-    def get_page_insights(self, page_id=None,
+    def get_page_insights(self, page_id: str = None,
                           user_defined_metric_list: List[PageMetric] = [],
                           since: int = None, until: int = None,
                           date_preset: DatePreset = DatePreset.yesterday,
@@ -451,7 +451,7 @@ class FBPageInsight(BaseSettings):
         total_resp = PostsResponse(data=post_data_list, paging=resp.paging)
         return total_resp
 
-    def get_post_insight(self, post_id: str, basic_metric=True, complement_metric=True, user_defined_metric_list=[]):
+    def get_post_insight(self, post_id: str, basic_metric=True, complement_metric=True, user_defined_metric_list: List[PageMetric] = []):
         page_id = post_id.split('_')[0]
 
         if len(user_defined_metric_list) == 0:
