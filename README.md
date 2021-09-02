@@ -1,5 +1,7 @@
 # Python Facebook Page Insights Client
 
+Currently, it is used by https://github.com/pycontw/pycon-etl
+
 ## Usage
 
 ## Get needed secrets first
@@ -44,10 +46,6 @@ Use `FBPageInsight` class to fetch. Please checkout the unit test code as an exa
         - `Calls within one hour = 4800 * Number of Engaged Users`
         - api response header inclues `x-business-use-case-usage`
 
-### Somehow FB will return invalid data sometimes 
-
-FB API is not very stable and plrease try again. 
-
 ## Development
 
 1. `poetry shell`
@@ -67,3 +65,8 @@ Two methods:
 ## TODO:
 
 https://github.com/pycontw/python-fb-page-insights-client/discussions/4
+
+## Issues
+
+- Somehow FB will return invalid data sometimes 
+
