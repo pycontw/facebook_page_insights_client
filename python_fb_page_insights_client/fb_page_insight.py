@@ -322,6 +322,10 @@ class FBPageInsight(BaseSettings):
     api_server = 'https://graph.facebook.com'
     api_version = 'v10.0'
 
+    class Config:
+        env_file = '.env'
+        env_file_encoding = 'utf-8'
+
     # class Config:
     #     env_file = ".env"
 
