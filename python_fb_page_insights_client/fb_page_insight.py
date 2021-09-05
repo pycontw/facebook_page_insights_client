@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from typing import List, Optional, Union, Dict, Tuple
+from typing import List, Optional, Union, Dict, Tuple, Literal
+
 from pydantic import BaseModel, BaseSettings, Field, validator
 from enum import Enum, auto, IntEnum
 # from dataclasses import dataclass, field
@@ -486,7 +487,7 @@ class FBPageInsight(BaseSettings):
 
     def get_page_default_web_insight(self, page_id: str = None, since_date: Tuple[str, str, str] = None, until_date: Tuple[str, str, str] = None,
                                      date_preset: DatePreset = DatePreset.yesterday,
-                                     period: Period = Period.week, return_as_dict=False):
+                                     period: Literal[Period.day, Period.week, Period.days_28, Period.month] = Period.week,  return_as_dict=False):
         """ period can not be lifetime"""
         page_id = self._page_id(page_id)
         if period == Period.lifetime:
