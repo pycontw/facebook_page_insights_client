@@ -1,14 +1,13 @@
 from datetime import datetime, timedelta
-from typing import List, Optional, Union, Dict, Tuple, Literal
+from typing import Any, List, Optional, Union, Dict, Tuple, Literal
 
 from pydantic import BaseModel, BaseSettings, Field, validator
 from enum import Enum, auto, IntEnum
-# from dataclasses import dataclass, field
-import time
-
-import http.client
 import requests
+from tinydb import TinyDB, Query
+
 import logging
+import http.client
 
 # debug only
 # logging.basicConfig(level=logging.DEBUG)
@@ -188,6 +187,63 @@ class AccountResponse(BaseModel):
     paging: AccountPaging
 
 
+class GranularScope(BaseModel):
+    scope: str
+    target_ids: List[str]  # page_id list
+
+
+class DebugError(BaseModel):
+    code: int
+    message: str
+    subcode: Optional[int]  # completely worng will not show this
+    type: Optional[str]
+
+
+class DebugData(BaseModel):
+    ''' TODO: success or error can be a union
+    '''
+    is_valid: bool
+    scopes: List[str]  # error will have a empty list
+    # "email",
+    # "read_insights",
+    # "pages_show_list",
+    # "pages_read_engagement",
+    # "public_profile"
+
+    error: Optional[DebugError]
+
+    issued_at: Optional[int]  # existing if a token is not never expired
+    profile_id: Optional[str]  # only existing for page token
+
+    # valid or token expired (invalid) will show below. if token is completely wrong
+    # (e.g. format is only 4 characteristics) will not show
+    granular_scopes: List[GranularScope]
+    app_id: str  # "1111808169311111"
+    type: str  # "USER" / "PAGE"
+    application: str  # "pycontw_insights_bot"
+    data_access_expires_at: int  # 1641046186
+    expires_at: int  # 1633276800. 0 means never
+    user_id: str
+
+
+# error case1: complete wrong
+#   "data": {
+#     "error": {
+#       "code": 190,
+#       "message": "Invalid OAuth access token."
+#     },
+#     "is_valid": false,
+#     "scopes": [
+#     ]
+#   }
+
+
+class DebugResponse(BaseModel):
+    data: Optional[DebugData]
+    # if omit access_token so the response will only have error and no data
+    error: Optional[DebugError]
+
+
 class PostData(BaseModel):
     id: str
     # e.g. 2021-08-07T07:00:00+0000
@@ -330,57 +386,176 @@ class FBPageInsight(BaseSettings):
     # class Config:
     #     env_file = ".env"
 
+    # def __call__(self, act):
+    #     print("I am:")
+    #     method = getattr(self, act)
+    #     if not method:
+    #         print("not implmeent")
+    #         # raise Exception("Method %s not implemented" % method_name)
+    #     method()
+
+    # def __getattribute__(self, attr):
+    #     method = object.__getattribute__(self, attr)
+    #     if not method:
+    #         raise Exception("Method %s not implemented" % attr)
+    #     if callable(method):
+    #         print("I am:")
+    #     return method
+
     @property
     def api_url(self):
         return f'{self.api_server}/{self.api_version}'
 
+    def _page_id(self, page_id: str):
+        if page_id == None:
+            used_page_id = self.fb_default_page_id
+        else:
+            used_page_id = page_id
+
+        return used_page_id
+
     # TODO:
-    # 1. page_token is doable, too?
-    def get_long_lived_user_token(self):
-        if self.fb_user_access_token == "" or self.fb_app_id == "" or self.fb_app_secret == "":
+
+    def get_long_lived_token(self, access_token: str):
+        ''' either user token or page_token'''
+        if self.fb_app_id == "" or self.fb_app_secret == "":
             return ""
-        url = f'{self.api_url}/oauth/access_token?grant_type=fb_exchange_token&client_id={self.fb_app_id}&client_secret={self.fb_app_secret}&fb_exchange_token={self.fb_user_access_token}'
+        url = f'{self.api_url}/oauth/access_token?grant_type=fb_exchange_token&client_id={self.fb_app_id}&client_secret={self.fb_app_secret}&fb_exchange_token={access_token}'
         r = requests.get(url)
         json_dict = r.json()
         resp = LongLivedResponse(**json_dict)
         if resp.access_token != None:
-            self.fb_user_access_token = resp.access_token
+            # self.fb_user_access_token = resp.access_token
             return resp.access_token
         else:
             return ""
 
-    # TODO: better way to refresh token instead of getting all pages' tokens?
-    def get_page_token(self, target_page_id: str):
-        if self.fb_user_access_token == "":
-            if self.fb_default_page_access_token != "":
-                # only use pre-defined page_token when user_token is not present
-                return self.fb_default_page_access_token
-            else:
-                raise ValueError(
-                    "fb_user_access_token should be assigned first")
+    def _check_scope(self, data: DebugData, target_page_id: str):
+        has_list_scope = False
+        if "read_insights" in data.scopes:
+            has_list_scope = True
+        has_engagement_scope = False
+        for granular_scope in data.granular_scopes:
+            scope = granular_scope.scope
+            target_ids = granular_scope.target_ids
+            # "read_insights" will only show in scopes but not in granular_scopes in https://developers.facebook.com/tools/explore, so forget it
+            # if scope == "pages_show_list":
+            #     if target_page_id in target_ids:
+            #         has_list_scope = True
+            if scope == "pages_read_engagement":
+                if target_page_id in target_ids:
+                    has_engagement_scope = True
+        if not has_list_scope or not has_engagement_scope:
+            return False
+        return True
+
+    def get_page_long_lived_token(self, target_page_id: str):
 
         if target_page_id == None or target_page_id == "":
             raise ValueError("target_page_id should be a non empty string")
+
+        # avoid reading db too often
         if self.fb_page_access_token_dict == None:
             self.fb_page_access_token_dict = {}
         page_token = self.fb_page_access_token_dict.get(target_page_id)
-        if page_token != None:
+        if page_token == "":
+            raise ValueError("no valid page token")
+        elif page_token != None:
             return page_token
 
-        url = f'{self.api_url}/me/accounts?access_token={self.fb_user_access_token}'
+        # check cached tinyDB
+        db = TinyDB('db.json')
+        q = Query()
+        store_record = db.get(
+            q.page_id == target_page_id)
+        if store_record:
+            page_long_lived_token = store_record["page_long_lived_token"]
+            self.fb_page_access_token_dict[target_page_id] = page_long_lived_token
+            return page_long_lived_token
+
+        if not self.fb_user_access_token and not self.fb_default_page_access_token:
+            # if self.fb_default_page_access_token != "":
+            #     # only use pre-defined page_token when user_token is not present
+            #     return self.fb_default_page_access_token
+            # else:
+            raise ValueError(
+                "fb_user_access_token/page_token should be assigned first")
+        # NOTE:
+        # If not get no_expire_page_token suecessfully, still set self.fb_page_access_token_dict[target_page_id]  = "",
+        # this is to avoid retrying failure in this time process running
+        no_expire_page_token = ""
+        if self.fb_default_page_access_token:
+            test_token = self.fb_default_page_access_token
+            resp = self.debug_token(test_token)
+            data = resp.data
+            if data is None or data.is_valid is False or data.type != 'PAGE':
+                print("invalid page token")
+            elif self._check_scope(data, target_page_id) is False:
+                # elif data.profile_id != target_page_id: # in some cases profile_is is missing
+                print(
+                    f"no has pages_show_list/pages_read_engagement for this page_id & page token:{target_page_id}")
+            elif data.expires_at == 0:
+                no_expire_page_token = test_token
+                print("get long-lived page token")
+            else:
+                # get long-lived token (which is never expired for accessing some basic data, e.g. page insights)
+                no_expire_page_token = self.get_long_lived_token(test_token)
+        if not no_expire_page_token and self.fb_user_access_token:
+            test_token = self.fb_user_access_token
+            resp = self.debug_token(test_token)
+            data = resp.data
+            if data is None or data.is_valid is False or data.type != "USER":
+                print("invalid user token")
+            else:
+                if self._check_scope(data, target_page_id) is False:
+                    print(
+                        f"no has pages_show_list/pages_read_engagement for this page_id & user token:{target_page_id}")
+                else:
+                    if data.expires_at == 0:
+                        print("get long-lived user token")
+                        no_expire_user_token = test_token
+                    else:
+                        # get long-lived token (which is never expired for accessing some basic data, e.g. page insights)
+                        no_expire_user_token = self.get_long_lived_token(
+                            test_token)
+                        # resp2 = self.debug_token(no_expire_user_token)
+                    no_expire_page_token = self.get_page_token_from_user_token(
+                        target_page_id, no_expire_user_token)
+
+        if no_expire_page_token:
+            db.insert({'page_id': target_page_id,
+                      'page_long_lived_token': no_expire_page_token})
+        else:
+            raise ValueError("no available valid user/page token")
+
+        self.fb_page_access_token_dict[target_page_id] = no_expire_page_token
+        return no_expire_page_token
+
+    def debug_token(self, token: str):
+        url = f'{self.api_url}/debug_token?access_token={token}&input_token={token}'
+        r = requests.get(url)
+        json_dict = r.json()
+        resp = DebugResponse(**json_dict)
+        return resp
+
+    # TODO: better way to refresh token instead of getting all pages' tokens?
+
+    def get_page_token_from_user_token(self, target_page_id: str, user_token: str):
+        url = f'{self.api_url}/me/accounts?access_token={user_token}'
         r = requests.get(url)
         json_dict = r.json()
         resp = AccountResponse(**json_dict)
         if resp.data != None and len(resp.data) > 0:
             for data in resp.data:
                 if data.access_token != None and data.id == target_page_id:
-                    self.fb_page_access_token_dict[target_page_id] = data.access_token
                     return data.access_token
         return ""
 
-    def compose_fb_graph_api_request(self, token: str, object_id: str, endpoint: str, param_dict: Dict[str, str] = {}):
+    def compose_fb_graph_api_page_request(self, page_id: str, endpoint: str, param_dict: Dict[str, str] = {}):
+        page_token = self.get_page_long_lived_token(page_id)
+
         params = self._convert_para_dict(param_dict)
-        url = f'{self.api_url}/{object_id}/{endpoint}?access_token={token}{params}'
+        url = f'{self.api_url}/{page_id}/{endpoint}?access_token={page_token}{params}'
         r = requests.get(url)
         json_dict = r.json()
         return json_dict
@@ -407,7 +582,7 @@ class FBPageInsight(BaseSettings):
                           date_preset: DatePreset = DatePreset.yesterday,
                           period: Period = Period.week):
         page_id = self._page_id(page_id)
-        page_token = self.get_page_token(page_id)
+        # page_token = self.get_page_long_lived_token(page_id)
 
         # TODO:
         # 1. validate parameters
@@ -418,11 +593,19 @@ class FBPageInsight(BaseSettings):
         metric_value = self._convert_metric_list(user_defined_metric_list)
 
         if since != None and until != None:
-            json_dict = self.compose_fb_graph_api_request(page_token,
-                                                          page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name, "since": since, "until": until})
+            json_dict = self.compose_fb_graph_api_page_request(
+                page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name, "since": since, "until": until})
         else:
-            json_dict = self.compose_fb_graph_api_request(page_token,
-                                                          page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
+            json_dict = self.compose_fb_graph_api_page_request(
+                page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
+
+        # TODO:
+        # error: {
+        # message: must be called with a Page access token
+        # type:  oauthexception
+        # code
+        # fbtrace_id }
+
         resp = InsightsResponse(**json_dict)
         return resp
 
@@ -430,7 +613,7 @@ class FBPageInsight(BaseSettings):
     def get_posts(self, page_id: str = None, since: int = None, until: int = None):
         # could use page_token or user_access_token
         page_id = self._page_id(page_id)
-        page_token = self.get_page_token(page_id)
+        # page_token = self.get_page_long_lived_token(page_id)
 
         # get_all = False
         next_url = ""
@@ -438,12 +621,12 @@ class FBPageInsight(BaseSettings):
         while next_url != None:
             if next_url == "":
                 if since != None and until != None:
-                    json_dict = self.compose_fb_graph_api_request(page_token,
-                                                                  # {"since": 1601555261, "until": 1625489082})
-                                                                  page_id, "posts", {"since": since, "until": until})
+                    json_dict = self.compose_fb_graph_api_page_request(
+                        # {"since": 1601555261, "until": 1625489082})
+                        page_id, "posts", {"since": since, "until": until})
                 else:
-                    json_dict = self.compose_fb_graph_api_request(page_token,
-                                                                  page_id, "posts")
+                    json_dict = self.compose_fb_graph_api_page_request(
+                        page_id, "posts")
                 resp = PostsResponse(**json_dict)
             else:
                 r = requests.get(next_url)
@@ -457,7 +640,6 @@ class FBPageInsight(BaseSettings):
         return total_resp
 
     def get_post_insight(self, post_id: str, basic_metric=True, complement_metric=True, user_defined_metric_list: List[PageMetric] = []):
-        page_id = post_id.split('_')[0]
 
         if len(user_defined_metric_list) == 0:
             metric_list = []
@@ -470,20 +652,16 @@ class FBPageInsight(BaseSettings):
             metric_list = user_defined_metric_list
         metric_value = self._convert_metric_list(metric_list)
 
-        page_token = self.get_page_token(page_id)
+        page_id = post_id.split('_')[0]
+        # page_token = self.get_page_long_lived_token(page_id)
 
-        json_dict = self.compose_fb_graph_api_request(page_token,
-                                                      post_id, "insights", {"metric": metric_value})
+        json_dict = self.compose_fb_graph_api_page_request(
+            post_id, "insights", {"metric": metric_value})
         # NOTE: somehow FB will return invalid api result
         # if json_dict.get("data") == None:
         #     print("not ok") for debugging,
         resp = InsightsResponse(**json_dict)
         return resp
-
-    def _page_id(self, page_id: str):
-        if page_id == None:
-            return self.fb_default_page_id
-        return page_id
 
     def get_page_default_web_insight(self, page_id: str = None, since_date: Tuple[str, str, str] = None, until_date: Tuple[str, str, str] = None,
                                      date_preset: DatePreset = DatePreset.yesterday,
