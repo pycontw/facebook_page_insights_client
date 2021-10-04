@@ -16,7 +16,7 @@ class TestStringMethods(unittest.TestCase):
         page_insight: PageWebInsightData = fb.get_page_default_web_insight()
         # date_preset=DatePreset.last_7d, period=Period.day, since=1627901347, until=1628246947)
 
-        # posts_insight: PostsWebInsightData = fb.get_post_default_web_insight()
+        posts_insight: PostsWebInsightData = fb.get_post_default_web_insight()
         # until_date=(2020, 11, 15))
 
         self.assertEqual("ok", "ok")

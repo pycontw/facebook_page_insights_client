@@ -551,11 +551,21 @@ class FBPageInsight(BaseSettings):
                     return data.access_token
         return ""
 
-    def compose_fb_graph_api_page_request(self, page_id: str, endpoint: str, param_dict: Dict[str, str] = {}):
-        page_token = self.get_page_long_lived_token(page_id)
+    def compose_fb_graph_api_page_request(self, page_id: str, endpoint: str, param_dict: Dict[str, str] = {}, object_id=""):
+        # TODO: refactor it later, page_id & object_id position
+        if page_id:
+            page_token = self.get_page_long_lived_token(page_id)
+        elif object_id:
+            page_token = self.get_page_long_lived_token(page_id)
+        else:
+            raise ValueError("no passed token")
 
         params = self._convert_para_dict(param_dict)
-        url = f'{self.api_url}/{page_id}/{endpoint}?access_token={page_token}{params}'
+        url = ""
+        if object_id:
+            url = f'{self.api_url}/{object_id}/{endpoint}?access_token={page_token}{params}'
+        elif page_id:
+            url = f'{self.api_url}/{page_id}/{endpoint}?access_token={page_token}{params}'
         r = requests.get(url)
         json_dict = r.json()
         return json_dict
@@ -656,7 +666,7 @@ class FBPageInsight(BaseSettings):
         # page_token = self.get_page_long_lived_token(page_id)
 
         json_dict = self.compose_fb_graph_api_page_request(
-            post_id, "insights", {"metric": metric_value})
+            page_id, "insights", {"metric": metric_value}, object_id=post_id)
         # NOTE: somehow FB will return invalid api result
         # if json_dict.get("data") == None:
         #     print("not ok") for debugging,
