@@ -184,12 +184,12 @@ class AccountPaging(BaseModel):
 
 class AccountResponse(BaseModel):
     data: List[AccountData]
-    paging: AccountPaging
+    paging: Optional[AccountPaging]
 
 
 class GranularScope(BaseModel):
     scope: str
-    target_ids: List[str]  # page_id list
+    target_ids: Optional[List[str]]  # page_id list
 
 
 class DebugError(BaseModel):
@@ -442,7 +442,8 @@ class FBPageInsight(BaseSettings):
             # if scope == "pages_show_list":
             #     if target_page_id in target_ids:
             #         has_list_scope = True
-            if scope == "pages_read_engagement":
+            # if user_token does not have page related, target_ids s None
+            if scope == "pages_read_engagement" and target_ids is not None:
                 if target_page_id in target_ids:
                     has_engagement_scope = True
         if not has_list_scope or not has_engagement_scope:
