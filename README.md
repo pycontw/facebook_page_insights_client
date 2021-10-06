@@ -68,7 +68,3 @@ Two methods:
 
 https://github.com/pycontw/python-fb-page-insights-client/discussions/4
 
-## Issues
-
-- Somehow FB will return invalid data sometimes 
-
