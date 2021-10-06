@@ -192,8 +192,9 @@ class AccountPaging(BaseModel):
 
 
 class AccountResponse(BaseModel):
-    data: List[AccountData]
+    data: Optional[List[AccountData]]
     paging: Optional[AccountPaging]
+    error: Optional[DebugError]
 
 
 class GranularScope(BaseModel):
@@ -410,7 +411,7 @@ class FBPageInsight(BaseSettings):
         return f'{self.api_server}/{self.api_version}'
 
     def _page_id(self, page_id: str):
-        if page_id == None:
+        if page_id is None:
             used_page_id = self.fb_default_page_id
         else:
             used_page_id = page_id
@@ -456,16 +457,16 @@ class FBPageInsight(BaseSettings):
 
     def get_page_long_lived_token(self, target_page_id: str):
 
-        if target_page_id == None or target_page_id == "":
+        if target_page_id is None or target_page_id == "":
             raise ValueError("target_page_id should be a non empty string")
 
         # avoid reading db too often
-        if self.fb_page_access_token_dict == None:
+        if self.fb_page_access_token_dict is None:
             self.fb_page_access_token_dict = {}
         page_token = self.fb_page_access_token_dict.get(target_page_id)
         if page_token == "":
             raise ValueError("no valid page token")
-        elif page_token != None:
+        elif page_token is not None:
             return page_token
 
         # check cached tinyDB
@@ -550,9 +551,12 @@ class FBPageInsight(BaseSettings):
         r = requests.get(url)
         json_dict = r.json()
         resp = AccountResponse(**json_dict)
-        if resp.data != None and len(resp.data) > 0:
+        if resp.error is not None:
+            raise ValueError(
+                f"fail to get page token from user token:{resp.error.message}")
+        if resp.data is not None and len(resp.data) > 0:
             for data in resp.data:
-                if data.access_token != None and data.id == target_page_id:
+                if data.access_token is not None and data.id == target_page_id:
                     return data.access_token
         return ""
 
@@ -607,7 +611,7 @@ class FBPageInsight(BaseSettings):
             user_defined_metric_list = [e for e in PageMetric]
         metric_value = self._convert_metric_list(user_defined_metric_list)
 
-        if since != None and until != None:
+        if since is not None and until is not None:
             json_dict = self.compose_fb_graph_api_page_request(
                 page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name, "since": since, "until": until})
         else:
@@ -626,9 +630,9 @@ class FBPageInsight(BaseSettings):
         # get_all = False
         next_url = ""
         post_data_list: List[PostData] = []
-        while next_url != None:
+        while next_url is not None:
             if next_url == "":
-                if since != None and until != None:
+                if since is not None and until is not None:
                     json_dict = self.compose_fb_graph_api_page_request(
                         # {"since": 1601555261, "until": 1625489082})
                         page_id, "posts", {"since": since, "until": until})
@@ -666,7 +670,7 @@ class FBPageInsight(BaseSettings):
         json_dict = self.compose_fb_graph_api_page_request(
             page_id, "insights", {"metric": metric_value}, object_id=post_id)
         # NOTE: somehow FB will return invalid api result
-        # if json_dict.get("data") == None:
+        # if json_dict.get("data") is None:
         #     print("not ok") for debugging,
         resp = InsightsResponse(**json_dict)
         return resp
@@ -674,7 +678,7 @@ class FBPageInsight(BaseSettings):
     def get_page_default_web_insight(self, page_id: str = None, since_date: Tuple[str, str, str] = None, until_date: Tuple[str, str, str] = None,
                                      date_preset: DatePreset = DatePreset.yesterday,
                                      period: Literal[Period.day, Period.week, Period.days_28, Period.month] = Period.week,  return_as_dict=False):
-        """ period can not be lifetime"""
+        """ since_date/until_date is (2021,9,9) format & period can not be lifetime"""
         page_id = self._page_id(page_id)
         if period == Period.lifetime:
             raise ValueError(
@@ -682,7 +686,7 @@ class FBPageInsight(BaseSettings):
 
         since = None
         until = None
-        if since_date != None and until_date != None:
+        if since_date is not None and until_date is not None:
             since = int(datetime(
                 *since_date).timestamp())
             until = int(datetime(
@@ -715,7 +719,7 @@ class FBPageInsight(BaseSettings):
             since_date, until_date, period_days can not be all specified as non None at the same time, will throw a error 
         """
 
-        if since_date != None and until_date != None and between_days != None:
+        if since_date is not None and until_date is not None and between_days is not None:
             raise ValueError(
                 "since_date, until_date, period_days can not all be non-None at the same time")
 
@@ -735,11 +739,11 @@ class FBPageInsight(BaseSettings):
         # first_day_next_month = datetime.datetime(2021, 1, 1)
         # e.g. 1609430400
 
-        if between_days == None:
+        if between_days is None:
             between_days = FBPageInsightConst.default_between_days
 
-        if until_date == None:
-            if since_date == None:
+        if until_date is None:
+            if since_date is None:
                 until_time = query_time
             else:
                 since_time = datetime(
@@ -749,7 +753,7 @@ class FBPageInsight(BaseSettings):
             until_time = datetime(*until_date)
         until = int(until_time.timestamp())
 
-        if since_date == None:
+        if since_date is None:
             since_time = until_time - timedelta(days=between_days)
         else:
             since_time = datetime(
@@ -807,7 +811,7 @@ class FBPageInsight(BaseSettings):
                 # end_time = datetime.strptime(
                 #     value_obj.end_time, '%Y-%m-%dT%H:%M:%S+%f').isoformat()  # .timestamp())
                 insight = insight_dict.get(end_time)
-                if insight == None:
+                if insight is None:
                     insight = PageDefaultWebInsight(
                         period=period, page_id=page_id, end_time=end_time)
                     insight_dict[end_time] = insight
