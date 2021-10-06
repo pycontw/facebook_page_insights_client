@@ -364,8 +364,9 @@ class PostsWebInsightData(BaseModel):
 
 
 class LongLivedResponse(BaseModel):
-    access_token: str
-    token_type: str
+    access_token: Optional[str]
+    token_type: Optional[str]
+    error: Optional[DebugError]
 
 
 class FBPageInsight(BaseSettings):
@@ -424,7 +425,10 @@ class FBPageInsight(BaseSettings):
         r = requests.get(url)
         json_dict = r.json()
         resp = LongLivedResponse(**json_dict)
-        if resp.access_token != None:
+        if resp.error is not None:
+            raise ValueError(
+                f"fail to get long-lived token:{resp.error.message}")
+        if resp.access_token is not None:
             # self.fb_user_access_token = resp.access_token
             return resp.access_token
         else:
@@ -510,10 +514,10 @@ class FBPageInsight(BaseSettings):
             else:
                 if self._check_scope(data, target_page_id) is False:
                     print(
-                        f"no has pages_show_list/pages_read_engagement for this page_id & user token:{target_page_id}")
+                        f"does not have pages_show_list/pages_read_engagement for this page_id & user token:{target_page_id}")
                 else:
                     if data.expires_at == 0:
-                        print("get long-lived user token")
+                        print("got long-lived user token yet")
                         no_expire_user_token = test_token
                     else:
                         # get long-lived token (which is never expired for accessing some basic data, e.g. page insights)

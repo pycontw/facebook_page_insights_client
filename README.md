@@ -31,7 +31,9 @@ You can choose any of below ways:
 - manually export them as environment variables
 - create a .env to include them
 
-if fb_default_page_access_token is filled and valid, fb_default_page_access_token usage will be skipped. fb_user_access_token is used to get page token internally. 
+if fb_default_page_access_token is filled and valid, fb_user_access_token usage will be skipped. fb_user_access_token is used to get page token internally. So you only need to fill either a valid fb_default_page_access_token or fb_user_access_token.
+
+You can skip fb_app_id and fb_app_secret if you are sure if fb_user_access_token/fb_default_page_access_token is long-lived token. In https://developers.facebook.com/tools/debug/accesstoken/, You can paste the token to check its "Expires" and "Valid" field.
 
 ## Fetch data 
 
