@@ -103,6 +103,14 @@ class PageMetric(Enum):
     page_impressions_organic_unique = auto()
 
 
+class DebugError(BaseModel):
+    code: int
+    message: str
+    subcode: Optional[int]  # completely worng will not show this
+    type: Optional[str]
+    fbtrace_id: Optional[str]
+
+
 class PostActivityValue(BaseModel):
     share: int = None
     like: int = None
@@ -152,9 +160,10 @@ class InsightsCursors(BaseModel):
 
 # page & post both use this
 class InsightsResponse(BaseModel):
-    data: List[InsightData]
+    data: Optional[List[InsightData]]
     # not seen Optional case but add it just in case
     paging: Optional[InsightsCursors]
+    error: Optional[DebugError]  # e.g. use invalid token
 
 
 class Category(BaseModel):
@@ -184,19 +193,12 @@ class AccountPaging(BaseModel):
 
 class AccountResponse(BaseModel):
     data: List[AccountData]
-    paging: AccountPaging
+    paging: Optional[AccountPaging]
 
 
 class GranularScope(BaseModel):
     scope: str
-    target_ids: List[str]  # page_id list
-
-
-class DebugError(BaseModel):
-    code: int
-    message: str
-    subcode: Optional[int]  # completely worng will not show this
-    type: Optional[str]
+    target_ids: Optional[List[str]]  # page_id list
 
 
 class DebugData(BaseModel):
@@ -362,8 +364,9 @@ class PostsWebInsightData(BaseModel):
 
 
 class LongLivedResponse(BaseModel):
-    access_token: str
-    token_type: str
+    access_token: Optional[str]
+    token_type: Optional[str]
+    error: Optional[DebugError]
 
 
 class FBPageInsight(BaseSettings):
@@ -414,8 +417,6 @@ class FBPageInsight(BaseSettings):
 
         return used_page_id
 
-    # TODO:
-
     def get_long_lived_token(self, access_token: str):
         ''' either user token or page_token'''
         if self.fb_app_id == "" or self.fb_app_secret == "":
@@ -424,7 +425,10 @@ class FBPageInsight(BaseSettings):
         r = requests.get(url)
         json_dict = r.json()
         resp = LongLivedResponse(**json_dict)
-        if resp.access_token != None:
+        if resp.error is not None:
+            raise ValueError(
+                f"fail to get long-lived token:{resp.error.message}")
+        if resp.access_token is not None:
             # self.fb_user_access_token = resp.access_token
             return resp.access_token
         else:
@@ -442,7 +446,8 @@ class FBPageInsight(BaseSettings):
             # if scope == "pages_show_list":
             #     if target_page_id in target_ids:
             #         has_list_scope = True
-            if scope == "pages_read_engagement":
+            # if user_token does not have page related, target_ids s None
+            if scope == "pages_read_engagement" and target_ids is not None:
                 if target_page_id in target_ids:
                     has_engagement_scope = True
         if not has_list_scope or not has_engagement_scope:
@@ -509,10 +514,10 @@ class FBPageInsight(BaseSettings):
             else:
                 if self._check_scope(data, target_page_id) is False:
                     print(
-                        f"no has pages_show_list/pages_read_engagement for this page_id & user token:{target_page_id}")
+                        f"does not have pages_show_list/pages_read_engagement for this page_id & user token:{target_page_id}")
                 else:
                     if data.expires_at == 0:
-                        print("get long-lived user token")
+                        print("got long-lived user token yet")
                         no_expire_user_token = test_token
                     else:
                         # get long-lived token (which is never expired for accessing some basic data, e.g. page insights)
@@ -609,13 +614,6 @@ class FBPageInsight(BaseSettings):
             json_dict = self.compose_fb_graph_api_page_request(
                 page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
 
-        # TODO:
-        # error: {
-        # message: must be called with a Page access token
-        # type:  oauthexception
-        # code
-        # fbtrace_id }
-
         resp = InsightsResponse(**json_dict)
         return resp
 
@@ -692,6 +690,9 @@ class FBPageInsight(BaseSettings):
 
         page_summary = self.get_page_insights(
             page_id, since=since, until=until, date_preset=date_preset, period=period)
+        if page_summary.error is not None:
+            raise ValueError(
+                f"page insight error:{page_summary.error.message}")
         page_summary_data = page_summary.data
 
         # page_composite_data = PagePostsCompositeData(
@@ -767,6 +768,9 @@ class FBPageInsight(BaseSettings):
             post_composite_list.append(composite_data)
             post_id = post.id
             post_insight = self.get_post_insight(post_id)
+            if post_insight.error is not None:
+                raise ValueError(
+                    f"post insight error:P{post_insight.error.message}")
             post_insight_data = post_insight.data
             for post_insight in post_insight_data:
                 if post_insight.name in PostMetric.__members__:
