@@ -66,8 +66,35 @@ class QueryValue(Enum):
     fb_exchange_token = auto()
 
 
-class PostDetailMetric(Enum):
+# class PostDetailMetric(Enum):
+#     """ support period: lifetime """
+#     post_clicks_by_type = auto()
+#     post_activity_by_action_type = auto()
+#     post_reactions_like_total = auto()
+#     post_reactions_love_total = auto()
+#     post_reactions_wow_total = auto()
+#     post_reactions_haha_total = auto()
+
+    # not sure web uses it or below
+    # post_negative_feedback_by_type_unique = auto()
+    # post_negative_feedback_by_type = auto()
+
+
+# class PostMetric(Enum):
+#     """ support period: lifetime """
+#     post_impressions_organic_unique = auto()
+#     post_clicks = auto()
+#     post_activity = auto()
+
+
+class PostMetric(Enum):
     """ support period: lifetime """
+    ## web basic ##
+    post_impressions_organic_unique = auto()
+    post_clicks = auto()
+    post_activity = auto()
+
+    ## web detail ##
     post_clicks_by_type = auto()
     post_activity_by_action_type = auto()
     post_reactions_like_total = auto()
@@ -75,16 +102,22 @@ class PostDetailMetric(Enum):
     post_reactions_wow_total = auto()
     post_reactions_haha_total = auto()
 
-    # not sure web uses it or below
-    # post_negative_feedback_by_type_unique = auto()
-    # post_negative_feedback_by_type = auto()
 
+post_web_basic_metric_list = [PostMetric.post_impressions_organic_unique,
+                              PostMetric.post_clicks,
+                              PostMetric.post_activity
+                              ]
+post_web_detail_metric_list = [PostMetric.post_clicks_by_type,
+                               PostMetric.post_activity_by_action_type,
+                               PostMetric.post_reactions_like_total,
+                               PostMetric.post_reactions_love_total,
+                               PostMetric.post_reactions_wow_total,
+                               PostMetric.post_reactions_haha_total
+                               ]
 
-class PostMetric(Enum):
-    """ support period: lifetime """
-    post_impressions_organic_unique = auto()
-    post_clicks = auto()
-    post_activity = auto()
+post_web_basic_metric_set = set()
+for metric in post_web_basic_metric_list:
+    post_web_basic_metric_set.add(metric.name)
 
 
 class PageMetric(Enum):
@@ -662,10 +695,11 @@ class FBPageInsight(BaseSettings):
         if len(user_defined_metric_list) == 0:
             metric_list = []
             if basic_metric is True:
-                metric_list += [
-                    e for e in PostMetric]
+                metric_list += post_web_basic_metric_list  # [
+                # e for e in PostMetric]
             if complement_metric is True:
-                metric_list += [e for e in PostDetailMetric]
+                # [e for e in PostDetailMetric]
+                metric_list += post_web_detail_metric_list
         else:
             metric_list = user_defined_metric_list
         metric_value = self._convert_metric_list(metric_list)
@@ -783,7 +817,8 @@ class FBPageInsight(BaseSettings):
                     f"post insight error:P{post_insight.error.message}")
             post_insight_data = post_insight.data
             for post_insight in post_insight_data:
-                if post_insight.name in PostMetric.__members__:
+                # PostMetric.__members__:
+                if post_insight.name in post_web_basic_metric_set:
                     composite_data.insight_data.append(post_insight)
                 else:
                     composite_data.insight_data_complement.append(post_insight)
@@ -887,14 +922,14 @@ class FBPageInsight(BaseSettings):
             for post_inisght_data in insight_data_complement:
                 key = post_inisght_data.name
                 # desc_dict[key] = post_inisght_data.description
-                if key == PostDetailMetric.post_activity_by_action_type.name:
+                if key == PostMetric.post_activity_by_action_type.name:
                     data = post_inisght_data.values[0].value
                     # on web, this value = sum(on post + on shares) but no api to get sub part
                     insight.likes = data.like
                     insight.comments = data.comment
                     insight.shares = data.share
 
-                elif key == PostDetailMetric.post_clicks_by_type.name:
+                elif key == PostMetric.post_clicks_by_type.name:
                     data = post_inisght_data.values[0].value
 
                     insight.photo_views = data.photo_view
@@ -912,13 +947,13 @@ class FBPageInsight(BaseSettings):
                 else:
                     value_obj = post_inisght_data.values[0]
                     value = value_obj.value
-                    if key == PostDetailMetric.post_reactions_like_total.name:
+                    if key == PostMetric.post_reactions_like_total.name:
                         insight.likes_like = value
-                    elif key == PostDetailMetric.post_reactions_love_total.name:
+                    elif key == PostMetric.post_reactions_love_total.name:
                         insight.likes_love = value
-                    elif key == PostDetailMetric.post_reactions_wow_total.name:
+                    elif key == PostMetric.post_reactions_wow_total.name:
                         insight.likes_wow = value
-                    elif key == PostDetailMetric.post_reactions_haha_total.name:
+                    elif key == PostMetric.post_reactions_haha_total.name:
                         insight.likes_haha = value
 
                     # e.g.
