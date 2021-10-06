@@ -595,6 +595,10 @@ class FBPageInsight(BaseSettings):
                 metric_value += ","+metric.name
         return metric_value
 
+    def _check_since_less_than_until(self, since: int, until: int):
+        if since > until:
+            raise ValueError("since is more than until, not valid")
+
     def get_page_insights(self, page_id: str = None,
                           user_defined_metric_list: List[PageMetric] = [],
                           since: int = None, until: int = None,
@@ -612,6 +616,7 @@ class FBPageInsight(BaseSettings):
         metric_value = self._convert_metric_list(user_defined_metric_list)
 
         if since is not None and until is not None:
+            self._check_since_less_than_until(since, until)
             json_dict = self.compose_fb_graph_api_page_request(
                 page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name, "since": since, "until": until})
         else:
@@ -633,6 +638,7 @@ class FBPageInsight(BaseSettings):
         while next_url is not None:
             if next_url == "":
                 if since is not None and until is not None:
+                    self._check_since_less_than_until(since, until)
                     json_dict = self.compose_fb_graph_api_page_request(
                         # {"since": 1601555261, "until": 1625489082})
                         page_id, "posts", {"since": since, "until": until})
