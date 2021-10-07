@@ -84,6 +84,116 @@ class PostMetric(Enum):
     post_reactions_wow_total = auto()
     post_reactions_haha_total = auto()
 
+    #### others ####
+    # Page Post Engagement
+    post_engaged_users = auto()
+    post_negative_feedback = auto()
+    post_negative_feedback_unique = auto()
+    post_negative_feedback_by_type = auto()
+    post_negative_feedback_by_type_unique = auto()
+    post_engaged_fan = auto()
+    # post_clicks
+    post_clicks_unique = auto()
+    # post_clicks_by_type
+    #  "value": {
+    #     "other clicks": 147,
+    #     "photo view": 9,
+    #     "link clicks": 190
+    #  }
+    post_clicks_by_type_unique = auto()
+
+    # Page Post Impressions
+    post_impressions = auto()
+    post_impressions_unique = auto()
+    post_impressions_paid = auto()
+    post_impressions_paid_unique = auto()
+    post_impressions_fan = auto()
+    post_impressions_fan_unique = auto()
+    post_impressions_fan_paid = auto()
+    post_impressions_fan_paid_unique = auto()
+    post_impressions_organic = auto()
+    post_impressions_viral = auto()
+    post_impressions_viral_unique = auto()
+    post_impressions_nonviral = auto()
+    post_impressions_nonviral_unique = auto()
+    # "value": {
+    #      "other": 6502
+    # }
+    post_impressions_by_story_type = auto()  # by type
+    post_impressions_by_story_type_unique = auto()
+
+    # Page Post Reactions
+    post_reactions_sorry_total = auto()
+    post_reactions_anger_total = auto()
+    # "value": {
+    #    "like": 69,
+    #    "love": 1
+    # }
+    post_reactions_by_type_total = auto()  # by type
+
+    # Stories
+    post_activity_unique = auto()
+    # "value": {
+    #             "share": 13,
+    #             "like": 58,
+    #             "comment": 6
+    #         }
+    post_activity_by_action_type_unique = auto()
+
+    ## Page Video Views
+    post_video_complete_views_30s_autoplayed = auto()
+    post_video_complete_views_30s_clicked_to_play = auto()
+    post_video_complete_views_30s_organic = auto()
+    post_video_complete_views_30s_paid = auto()
+    post_video_complete_views_30s_unique = auto()
+
+    # Page Video Posts
+    post_video_avg_time_watched = auto()
+    post_video_complete_views_organic = auto()
+    post_video_complete_views_organic_unique = auto()
+    post_video_complete_views_paid = auto()
+    post_video_complete_views_paid_unique = auto()
+    post_video_retention_graph = auto()
+    post_video_retention_graph_clicked_to_play = auto()
+    post_video_retention_graph_autoplayed = auto()
+    post_video_views_organic = auto()
+    post_video_views_organic_unique = auto()
+    post_video_views_paid = auto()
+    post_video_views_paid_unique = auto()
+    post_video_length = auto()
+    post_video_views = auto()
+    post_video_views_unique = auto()
+    post_video_views_autoplayed = auto()
+    post_video_views_clicked_to_play = auto()
+    post_video_views_15s = auto()
+    post_video_views_60s_excludes_shorter = auto()
+    post_video_views_10s = auto()
+    post_video_views_10s_unique = auto()
+    post_video_views_10s_autoplayed = auto()
+    post_video_views_10s_clicked_to_play = auto()
+    post_video_views_10s_organic = auto()
+    post_video_views_10s_paid = auto()
+    post_video_views_10s_sound_on = auto()
+    post_video_views_sound_on = auto()
+    post_video_view_time = auto()
+    post_video_view_time_organic = auto()
+    # "data": [] ????
+    post_video_view_time_by_age_bucket_and_gender = auto()
+    #  "value": {}
+    post_video_view_time_by_region_id = auto()
+    #  "value": {}
+    post_video_views_by_distribution_type = auto()
+    #  "value": {}
+    post_video_view_time_by_distribution_type = auto()
+    #  "value": {}
+    post_video_view_time_by_country_id = auto()
+
+    # Video Ad Breaks
+    # if not admin, "message": "(#200) Monetization metrics are only visible for Page admins with access to monetization insights.",
+    post_video_ad_break_ad_impressions = auto()
+    post_video_ad_break_earnings = auto()
+    post_video_ad_break_ad_cpm = auto()
+
 
 post_web_basic_metric_list = [
     PostMetric.post_impressions_organic_unique,
@@ -97,6 +207,9 @@ post_web_detail_metric_list = [
     PostMetric.post_reactions_love_total,
     PostMetric.post_reactions_wow_total,
     PostMetric.post_reactions_haha_total,
+    # not sure web uses it or below
+    # post_negative_feedback_by_type_unique,
+    # post_negative_feedback_by_type
 ]
 
 post_web_basic_metric_set = set()
@@ -119,6 +232,293 @@ class PageMetric(Enum):
     # page_daily_follows_unique not found on https://developers.facebook.com/docs/graph-api/reference/v11.0/insights
     page_daily_follows_unique = auto()
     page_impressions_organic_unique = auto()
+
+    ##### Other #####
+    # below return is not value, is dict, but has not seen non empty data yet
+    # https://developers.facebook.com/docs/graph-api/reference/insights/#tab-types
+    # Page Content
+    #  "values": [
+    #                 {
+    #                     "value": {},
+    #                     "end_time": "2021-10-05T07:00:00+0000"
+    #                 },
+    #                 {
+    #                     "value": {
+    #                         "tab_home": 186,
+    #                         "tab_events": 4,
+    #                         "profile_posts": 6,
+    #                         "tab_pages_news_feed": 3,
+    #                         "about": 9,
+    #                         "tab_groups": 1,
+    #                         "community": 5,
+    #                         "posts": 12,
+    #                         "photos": 3,
+    #                         "tab_photos": 2,
+    #                         "tab_events_admin_tool": 1,
+    #                         "home": 236,
+    #                         "profile_about": 2,
+    #                         "profile_home": 21,
+    #                         "tab_about": 3,
+    #                         "(null)": 1,
+    #                         "events": 3
+    #                     },
+    #                     "end_time": "2021-10-06T07:00:00+0000"
+    #                 }
+    page_tab_views_login_top_unique = auto()  # by type
+    page_tab_views_login_top = auto()  #
+    page_tab_views_logout_top = auto()  # seen videos key
+
+    # Page CTA Clicks
+    #     "value": {
+    #       "1384356361683202": 0,
+    #       "1209660005819506": 0,
+    #       "736943423091169": 0
+    #       },
+    page_cta_clicks_logged_in_total = auto()
+    page_cta_clicks_logged_in_unique = auto()
+    # "value": {},
+    page_cta_clicks_by_site_logged_in_unique = auto()
+    page_cta_clicks_by_age_gender_logged_in_unique = auto()  # []
+    page_cta_clicks_logged_in_by_country_unique = auto()  # []
+    page_cta_clicks_logged_in_by_city_unique = auto()
+    page_call_phone_clicks_logged_in_unique = auto()  # "value": 0
+    page_call_phone_clicks_by_age_gender_logged_in_unique = auto()
+    page_call_phone_clicks_logged_in_by_country_unique = auto()
+    page_call_phone_clicks_logged_in_by_city_unique = auto()
+    page_call_phone_clicks_by_site_logged_in_unique = auto()
+    page_get_directions_clicks_logged_in_unique = auto()
+    page_get_directions_clicks_by_age_gender_logged_in_unique = auto()
+    page_get_directions_clicks_logged_in_by_country_unique = auto()
+    page_get_directions_clicks_logged_in_by_city_unique = auto()
+    page_get_directions_clicks_by_site_logged_in_unique = auto()  # {}
+    page_website_clicks_logged_in_unique = auto()
+    page_website_clicks_by_age_gender_logged_in_unique = auto()
+    page_website_clicks_logged_in_by_country_unique = auto()
+    page_website_clicks_logged_in_by_city_unique = auto()
+    page_website_clicks_by_site_logged_in_unique = auto()  # {}
+
+    # Page Engagement
+    page_engaged_users = auto()
+    page_consumptions = auto()
+    page_consumptions_unique = auto()
+    #    "values": [
+    #         {
+    #             "value": {
+    #                 "link clicks": 10,
+    #                 "other clicks": 16,
+    #                 "photo view": 8
+    #             },
+    page_consumptions_by_consumption_type = auto()  # by type
+    page_consumptions_by_consumption_type_unique = auto()  # by type
+    page_places_checkin_total = auto()
+    page_places_checkin_total_unique = auto()
+    page_places_checkin_mobile = auto()
+    page_places_checkin_mobile_unique = auto()
+    page_places_checkins_by_age_gender = auto()  # []????
+    page_places_checkins_by_locale = auto()
+    page_places_checkins_by_country = auto()
+    page_negative_feedback = auto()
+    page_negative_feedback_unique = auto()
+    page_negative_feedback_by_type = (  # {}, hide_all_clicks / hide_clicks
+        auto()
+    )  # by type # https://developers.facebook.com/docs/graph-api/reference/v12.0/insights#negative-feedback-type
+    page_negative_feedback_by_type_unique = auto()
+    # "like": 28,
+    # "comment": 1,
+    # "other": 6
+    page_positive_feedback_by_type = (
+        auto()
+    )  # https://developers.facebook.com/docs/graph-api/reference/v12.0/insights#positive-feedback-types
+    page_positive_feedback_by_type_unique = auto()
+    page_fans_online = auto()
+    page_fans_online_per_day = auto()
+    #     "value": {
+    #     "total": 6,
+    #     "paid": 0,
+    #     "unpaid": 6
+    # },
+    page_fan_adds_by_paid_non_paid_unique = auto()
+
+    # Page Impressions
+    page_impressions = auto()
+    page_impressions_unique = auto()
+    page_impressions_paid = auto()
+    page_impressions_paid_unique = auto()
+    page_impressions_organic = auto()
+    page_impressions_viral = auto()
+    page_impressions_viral_unique = auto()
+    page_impressions_nonviral = auto()
+    page_impressions_nonviral_unique = auto()
+    # "page post": 422,
+    # "other": 10
+    page_impressions_by_story_type = auto()
+    page_impressions_by_story_type_unique = auto()
+    # "value": {
+    #     "Tachung, Yilan, Taiwan": 1,
+    #     "Umuahia, Nigeria": 1,
+    page_impressions_by_city_unique = auto()
+    # "DE": 1,
+    # "BD": 1,
+    # "MO": 2,
+    # "HK": 6,
+    # "TW": 1028,
+    page_impressions_by_country_unique = auto()
+    #  "value": {
+    # "zh_HK": 6,
+    # "en_GB": 30,
+    # "zh_TW": 924,
+    # "ko_KR": 1,
+    # "en_US": 118,
+    # "zh_CN": 10,
+    # "en_PI": 1,
+    # "ja_JP": 4,
+    page_impressions_by_locale_unique = auto()
+    # "M.35-44": 207,
+    # "F.25-34": 123,
+    # "U.18-24": 1,
+    # "M.25-34": 390,
+    page_impressions_by_age_gender_unique = auto()
+    page_impressions_frequency_distribution = auto()
+    #   "value": {
+    #                 "1": 361,
+    #                 "2": 19,
+    #                 "3": 1,
+    #                 "5": 1,
+    #                 "6-10": 4
+    #             },
+    page_impressions_viral_frequency_distribution = auto()
+
+    # Page Posts
+    page_posts_impressions = auto()
+    page_posts_impressions_unique = auto()
+    page_posts_impressions_paid = auto()
+    page_posts_impressions_paid_unique = auto()
+    page_posts_impressions_organic = auto()
+    page_posts_impressions_organic_unique = auto()
+    page_posts_served_impressions_organic_unique = auto()
+    page_posts_impressions_viral = auto()
+    page_posts_impressions_viral_unique = auto()
+    page_posts_impressions_nonviral = auto()
+    page_posts_impressions_nonviral_unique = auto()
+    #    "1": 975,
+    #    "2": 93,
+    #    "11-20": 6,
+    page_posts_impressions_frequency_distribution = auto()
+
+    # Page Reactions
+    page_actions_post_reactions_like_total = auto()  # take a little time to show
+    page_actions_post_reactions_love_total = auto()
+    page_actions_post_reactions_wow_total = auto()
+    page_actions_post_reactions_haha_total = auto()
+    page_actions_post_reactions_sorry_total = auto()
+    page_actions_post_reactions_anger_total = auto()
+    page_actions_post_reactions_total = auto()
+
+    # Page User Demographics
+    page_fans = auto()
+    page_fans_locale = auto()
+    page_fans_city = auto()
+    page_fans_country = auto()
+    page_fans_gender_age = auto()
+    #  "Other": 2,
+    #   "Your Page": 4
+    page_fans_by_like_source = auto()  # by type
+    page_fans_by_like_source_unique = auto()  # by type
+    page_fan_removes = auto()
+    page_fan_removes_unique = auto()
+    page_fans_by_unlike_source = auto()  # by type
+    page_fans_by_unlike_source_unique = auto()  # {}
+
+    # Page Video Views
+    page_video_views_paid = auto()
+    page_video_views_organic = auto()
+    # "total": 1,
+    # "unpaid": 1,
+    # "paid": 0
+    page_video_views_by_paid_non_paid = auto()
+    page_video_views_autoplayed = auto()
+    page_video_views_click_to_play = auto()
+    page_video_views_unique = auto()
+    page_video_repeat_views = auto()
+    page_video_complete_views_30s = auto()
+    page_video_complete_views_30s_paid = auto()
+    page_video_complete_views_30s_organic = auto()
+    page_video_complete_views_30s_autoplayed = auto()
+    page_video_complete_views_30s_click_to_play = auto()
+    page_video_complete_views_30s_unique = auto()
+    page_video_complete_views_30s_repeat_views = auto()
+
+    page_video_views_10s = auto()
+    page_video_views_10s_paid = auto()
+    page_video_views_10s_organic = auto()
+    page_video_views_10s_autoplayed = auto()
+    page_video_views_10s_click_to_play = auto()
+    page_video_views_10s_unique = auto()
+    page_video_views_10s_repeat = auto()
+    page_video_view_time = auto()
+
+    # Page Views
+    # page_views_total
+    page_views_logout = auto()
+    page_views_logged_in_total = auto()
+    page_views_logged_in_unique = auto()
+    # "value": {
+    #     "https://pycast.firstory.io/": 1,
+    #     "https://www.google.com/": 3
+    # },
+    page_views_external_referrals = auto()
+    page_views_by_profile_tab_total = auto()
+    # "HOME": 378,
+    # "POSTS": 5,
+    # "ABOUT": 2,
+    # "EVENTS": 2,
+    # "GROUPS": 1
+    page_views_by_profile_tab_logged_in_unique = auto()
+    page_views_by_internal_referer_logged_in_unique = auto()
+    # "OTHER": 4, <- will omit if zero
+    # "WWW": 173,
+    # "MOBILE": 249
+    page_views_by_site_logged_in_unique = auto()
+    # "45-54.F": 6,
+    page_views_by_age_gender_logged_in_unique = auto()
+    # "Facebook": 14,
+    # "google.com": 1,
+    # "none": 13
+    page_views_by_referers_logged_in_unique = auto()
+
+    # Stories:
+    #     "fan": 56,
+    #     "other": 262,
+    #     "mention": 4,
+    #     "page post": 15
+    # },
+    page_content_activity_by_action_type_unique = auto()  # by type
+    page_content_activity_by_age_gender_unique = auto()
+    page_content_activity_by_city_unique = auto()
+    page_content_activity_by_country_unique = auto()
+    page_content_activity_by_locale_unique = auto()
+    page_content_activity = auto()
+    # "fan": 4,
+    # "page post": 2,
+    # "other": 29
+    page_content_activity_by_action_type = auto()  # by type
+
+    # Video Ad Breaks
+    page_daily_video_ad_break_ad_impressions_by_crosspost_status = auto()
+    page_daily_video_ad_break_cpm_by_crosspost_status = auto()
+    page_daily_video_ad_break_earnings_by_crosspost_status = auto()
+
+
+page_web_basic_metric_list = [
+    PageMetric.page_total_actions,
+    PageMetric.page_views_total,
+    PageMetric.page_fan_adds_unique,
+    PageMetric.page_fan_adds,
+    PageMetric.page_post_engagements,
+    PageMetric.page_video_views,
+    PageMetric.page_daily_follows_unique,
+    PageMetric.page_impressions_organic_unique,
+]
 
 
 class DebugError(BaseModel):
@@ -636,7 +1036,7 @@ class FBPageInsight(BaseSettings):
         # 2. support empty period? it will return day/week/days_28
 
         if len(user_defined_metric_list) == 0:
-            user_defined_metric_list = [e for e in PageMetric]
+            user_defined_metric_list = page_web_basic_metric_list
         metric_value = self._convert_metric_list(user_defined_metric_list)
 
         if since is not None and until is not None:
