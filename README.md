@@ -1,4 +1,4 @@
-# Python Facebook Page Insights Client
+# Python Page Insights Client
 
 Currently, it is used by https://github.com/pycontw/pycon-etl
 
