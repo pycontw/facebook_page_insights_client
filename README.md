@@ -66,5 +66,5 @@ Two methods:
 
 ## TODO:
 
-https://github.com/pycontw/python-fb-page-insights-client/discussions/4
+https://github.com/pycontw/facebook_page_insights_client/discussions/4
 
