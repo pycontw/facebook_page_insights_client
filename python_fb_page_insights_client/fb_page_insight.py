@@ -94,7 +94,7 @@ class PostMetric(Enum):
     post_engaged_fan = auto()
     # post_clicks
     post_clicks_unique = auto()
-    # post_clicks_by_type
+    # x post_clicks_by_type
     #  "value": {
     #     "other clicks": 147,
     #     "photo view": 9,
@@ -116,7 +116,7 @@ class PostMetric(Enum):
     post_impressions_viral_unique = auto()
     post_impressions_nonviral = auto()
     post_impressions_nonviral_unique = auto()
-    # "value": {
+    # x "value": { # PageStoryValue
     #      "other": 6502
     # }
     post_impressions_by_story_type = auto()  # by type
@@ -125,7 +125,7 @@ class PostMetric(Enum):
     # Page Post Reactions
     post_reactions_sorry_total = auto()
     post_reactions_anger_total = auto()
-    # "value": {
+    # x "value": {
     #    "like": 69,
     #    "love": 1
     # }
@@ -133,7 +133,7 @@ class PostMetric(Enum):
 
     # Stories
     post_activity_unique = auto()
-    # "value": {
+    # x "value": { # PostActivityValue
     #             "share": 13,
     #             "like": 58,
     #             "comment": 6
@@ -178,14 +178,22 @@ class PostMetric(Enum):
     post_video_view_time = auto()
     post_video_view_time_organic = auto()
     # "data": [] ????
+    # TODO 1: like page_impressions_by_age_gender_unique?
     post_video_view_time_by_age_bucket_and_gender = auto()
-    #  "value": {}
+    #  "values": [
+    #     {
+    #         "value": {} // usually it is just a simple "value": 0
+    #     }
+    # ],
+    # TODO: find a sample !!!!???
     post_video_view_time_by_region_id = auto()
     #  "value": {}
+    # TODO: like page_impressions_viral_frequency_distribution?
     post_video_views_by_distribution_type = auto()
-    #  "value": {}
+    #  "value": {},
     post_video_view_time_by_distribution_type = auto()
     #  "value": {}
+    # should like page_impressions_by_country_unique
     post_video_view_time_by_country_id = auto()
 
     # Video Ad Breaks
@@ -234,6 +242,7 @@ class PageMetric(Enum):
     page_impressions_organic_unique = auto()
 
     ##### Other #####
+    # TODO:
     # below return is not value, is dict, but has not seen non empty data yet
     # https://developers.facebook.com/docs/graph-api/reference/insights/#tab-types
     # Page Content
@@ -268,6 +277,7 @@ class PageMetric(Enum):
     page_tab_views_login_top = auto()  #
     page_tab_views_logout_top = auto()  # seen videos key
 
+    # TODO:
     # Page CTA Clicks
     #     "value": {
     #       "1384356361683202": 0,
@@ -277,6 +287,7 @@ class PageMetric(Enum):
     page_cta_clicks_logged_in_total = auto()
     page_cta_clicks_logged_in_unique = auto()
     # "value": {},
+    # TODO: by_site_logged ?
     page_cta_clicks_by_site_logged_in_unique = auto()
     page_cta_clicks_by_age_gender_logged_in_unique = auto()  # []
     page_cta_clicks_logged_in_by_country_unique = auto()  # []
@@ -301,7 +312,7 @@ class PageMetric(Enum):
     page_engaged_users = auto()
     page_consumptions = auto()
     page_consumptions_unique = auto()
-    #    "values": [
+    # x    "values": [ PostClickValue
     #         {
     #             "value": {
     #                 "link clicks": 10,
@@ -333,9 +344,9 @@ class PageMetric(Enum):
     page_fans_online = auto()
     page_fans_online_per_day = auto()
     #     "value": {
-    #     "total": 6,
-    #     "paid": 0,
-    #     "unpaid": 6
+    #       "total": 6,
+    #       "paid": 0,
+    #       "unpaid": 6
     # },
     page_fan_adds_by_paid_non_paid_unique = auto()
 
@@ -349,10 +360,11 @@ class PageMetric(Enum):
     page_impressions_viral_unique = auto()
     page_impressions_nonviral = auto()
     page_impressions_nonviral_unique = auto()
-    # "page post": 422,
+    # x "page post": 422,
     # "other": 10
     page_impressions_by_story_type = auto()
     page_impressions_by_story_type_unique = auto()
+    # TODO: by_city
     # "value": {
     #     "Tachung, Yilan, Taiwan": 1,
     #     "Umuahia, Nigeria": 1,
@@ -362,6 +374,7 @@ class PageMetric(Enum):
     # "MO": 2,
     # "HK": 6,
     # "TW": 1028,
+    # TODO
     page_impressions_by_country_unique = auto()
     #  "value": {
     # "zh_HK": 6,
@@ -372,11 +385,13 @@ class PageMetric(Enum):
     # "zh_CN": 10,
     # "en_PI": 1,
     # "ja_JP": 4,
+    # TODO:
     page_impressions_by_locale_unique = auto()
     # "M.35-44": 207,
     # "F.25-34": 123,
     # "U.18-24": 1,
     # "M.25-34": 390,
+    # TODO:
     page_impressions_by_age_gender_unique = auto()
     page_impressions_frequency_distribution = auto()
     #   "value": {
@@ -385,7 +400,8 @@ class PageMetric(Enum):
     #                 "3": 1,
     #                 "5": 1,
     #                 "6-10": 4
-    #             },
+    #  },
+    # TODO:
     page_impressions_viral_frequency_distribution = auto()
 
     # Page Posts
@@ -466,8 +482,10 @@ class PageMetric(Enum):
     #     "https://pycast.firstory.io/": 1,
     #     "https://www.google.com/": 3
     # },
+    # TODO:
     page_views_external_referrals = auto()
     page_views_by_profile_tab_total = auto()
+    # TODO:
     # "HOME": 378,
     # "POSTS": 5,
     # "ABOUT": 2,
@@ -475,18 +493,20 @@ class PageMetric(Enum):
     # "GROUPS": 1
     page_views_by_profile_tab_logged_in_unique = auto()
     page_views_by_internal_referer_logged_in_unique = auto()
+    # TODO: API? or api? case sensitive?
     # "OTHER": 4, <- will omit if zero
     # "WWW": 173,
     # "MOBILE": 249
     page_views_by_site_logged_in_unique = auto()
     # "45-54.F": 6,
     page_views_by_age_gender_logged_in_unique = auto()
+    # TODO:
     # "Facebook": 14,
     # "google.com": 1,
     # "none": 13
     page_views_by_referers_logged_in_unique = auto()
 
-    # Stories:
+    # x Stories:
     #     "fan": 56,
     #     "other": 262,
     #     "mention": 4,
@@ -498,9 +518,17 @@ class PageMetric(Enum):
     page_content_activity_by_country_unique = auto()
     page_content_activity_by_locale_unique = auto()
     page_content_activity = auto()
+    # x PageStoryValue
     # "fan": 4,
     # "page post": 2,
     # "other": 29
+    # {
+    #     "value": {
+    #         "other": 12,
+    #         "fan": 10
+    #     },
+    #     "end_time": "2021-10-25T07:00:00+0000"
+    # },
     page_content_activity_by_action_type = auto()  # by type
 
     # Video Ad Breaks
@@ -541,7 +569,70 @@ class PostClickValue(BaseModel):
     other_clicks: int = Field(None, alias="other clicks")
 
 
-class ByTypeValue(PostActivityValue, PostClickValue):
+class PageStoryValue(BaseModel):
+    # use by Page & Page, too
+    checkin: int = None
+    coupon: int = None
+    event: int = None
+    fan: int = None
+    mention: int = None
+    page_post: int = Field(None, alias="page post")
+    question: int = None
+    user_post: int = Field(None, alias="user post")
+    other: int = None
+
+
+class PostReactionType(BaseModel):
+    sorry: Optional[int]
+    anger: Optional[int]
+    like: Optional[int]
+    love: Optional[int]
+    wow: Optional[int]
+    haha: Optional[int]
+
+
+class PageNegativeFeedback(BaseModel):
+    hide_clicks: Optional[int]
+    hide_all_clicks: Optional[int]
+    report_spam_clicks: Optional[int]
+    unlike_page_clicks: Optional[int]
+
+
+class PagePostiveFeedback(BaseModel):
+    like: Optional[int]
+    comment: Optional[int]
+    other: Optional[int]
+    answer: Optional[int]
+    claim: Optional[int]
+    link: Optional[int]
+    rsvp: Optional[int]
+
+
+class PageFanPaidType(BaseModel):
+    # undocumented
+    total: Optional[int]
+    paid: Optional[int]
+    unpaid: Optional[int]
+
+
+class PageLikeSources(BaseModel):
+    ads: int = Field(None, alias="Ads")
+    news_feed: int = Field(None, alias="News Feed")
+    page_suggestions: int = Field(None, alias="Page Suggestions")
+    restored_likes: int = Field(None, alias="Restored Likes from Reactivated Accounts")
+    search: int = Field(None, alias="Search")
+    your_page: int = Field(None, alias="Your Page")
+    other: int = Field(None, alias="Other")  # undocumented
+
+
+class PageSiteLoggedType(BaseModel):
+    other: int = Field(None, alias="OTHER")
+    www: int = Field(None, alias="WWW")
+    mobile: int = Field(None, alias="MOBILE")
+    api: int = Field(None, alias="API")
+
+
+class ByTypeValue(PostActivityValue, PostClickValue, PageStoryValue, PostReactionType):
     """since pydantic union has some bug, so combine them (intersection)"""
 
     # TODO: add more ByTypeValue, e.g. page_positive_feedback_by_type
@@ -1271,7 +1362,8 @@ class FBPageInsight(BaseSettings):
         """currently it only support one period, it querying with on specific period in low level api,
         will return multiple periods"""
 
-        insight_dict: Dict[int:PageDefaultWebInsight] = {}
+        # TODO: test it, previously it is using [int, PageDefaultWebInsight]
+        insight_dict: Dict[int, PageDefaultWebInsight] = {}
 
         for page_insight_data in page_data:
             key = page_insight_data.name
