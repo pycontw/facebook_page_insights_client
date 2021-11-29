@@ -1,10 +1,10 @@
 # Python Page Insights Client
 
-Currently, it is used by https://github.com/pycontw/pycon-etl
+Currently, it is used by https://github.com/pycontw/pycon-etl . Check [dags/ods/fb_page_insights/udfs/fb_page_insights_data_uploader.py](https://github.com/pycontw/pycon-etl/blob/master/dags/ods/fb_page_insights/dags/fb_page_insights_2_bigquery.py) as an example of how to use this Python module.
 
 ## Usage
 
-## Get needed secrets first
+### Get needed secrets first
 
 https://github.com/facebook/facebook-python-business-sdk#register-an-app is a reference and the steps are 
 1. create a FB app and get its `app_id` and `secret`, 
