@@ -1115,25 +1115,25 @@ class FBPageInsight(BaseSettings):
                     return data.access_token
         return ""
 
-    def compose_fb_graph_api_page_request(
-        self, page_id: str, endpoint: str, param_dict: Dict[str, str] = {}, object_id=""
+    def compose_fb_graph_object_endpoint_api(
+        self,
+        page_id: str,
+        endpoint: str,
+        param_dict: Dict[str, str] = {},
+        object_id: str = "",
     ):
+        """object_id is page_id by default (if not specify)"""
+
         # TODO: refactor it later, page_id & object_id position
-        if page_id:
-            page_token = self.get_page_long_lived_token(page_id)
-        elif object_id:
-            page_token = self.get_page_long_lived_token(page_id)
-        else:
-            raise ValueError("no passed token")
+        page_token = self.get_page_long_lived_token(page_id)
+
+        if not object_id:
+            object_id = page_id
 
         params = self._convert_para_dict(param_dict)
-        url = ""
-        if object_id:
-            url = f"{self.api_url}/{object_id}/{endpoint}?access_token={page_token}{params}"
-        elif page_id:
-            url = (
-                f"{self.api_url}/{page_id}/{endpoint}?access_token={page_token}{params}"
-            )
+
+        url = f"{self.api_url}/{object_id}/{endpoint}?access_token={page_token}{params}"
+
         r = requests.get(url)
         json_dict = r.json()
         return json_dict
@@ -1180,7 +1180,7 @@ class FBPageInsight(BaseSettings):
 
         if since is not None and until is not None:
             self._check_since_less_than_until(since, until)
-            json_dict = self.compose_fb_graph_api_page_request(
+            json_dict = self.compose_fb_graph_object_endpoint_api(
                 page_id,
                 "insights",
                 {
@@ -1192,7 +1192,7 @@ class FBPageInsight(BaseSettings):
                 },
             )
         else:
-            json_dict = self.compose_fb_graph_api_page_request(
+            json_dict = self.compose_fb_graph_object_endpoint_api(
                 page_id,
                 "insights",
                 {
@@ -1218,14 +1218,16 @@ class FBPageInsight(BaseSettings):
             if next_url == "":
                 if since is not None and until is not None:
                     self._check_since_less_than_until(since, until)
-                    json_dict = self.compose_fb_graph_api_page_request(
+                    json_dict = self.compose_fb_graph_object_endpoint_api(
                         # {"since": 1601555261, "until": 1625489082})
                         page_id,
                         "posts",
                         {"since": since, "until": until},
                     )
                 else:
-                    json_dict = self.compose_fb_graph_api_page_request(page_id, "posts")
+                    json_dict = self.compose_fb_graph_object_endpoint_api(
+                        page_id, "posts"
+                    )
                 resp = PostsResponse(**json_dict)
             else:
                 r = requests.get(next_url)
@@ -1261,7 +1263,7 @@ class FBPageInsight(BaseSettings):
         page_id = post_id.split("_")[0]
         # page_token = self.get_page_long_lived_token(page_id)
 
-        json_dict = self.compose_fb_graph_api_page_request(
+        json_dict = self.compose_fb_graph_object_endpoint_api(
             page_id, "insights", {"metric": metric_value}, object_id=post_id
         )
         # NOTE: somehow FB will return invalid api result
