@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, List, Optional, Union, Dict, Tuple, Literal
 
-from pydantic import BaseModel, BaseSettings, Field, validator
+from pydantic import BaseModel, BaseSettings, Field, validator, root_validator
 from enum import Enum, auto, IntEnum
 import requests
 from tinydb import TinyDB, Query
@@ -570,7 +570,7 @@ class PostClickValue(BaseModel):
 
 
 class PageStoryValue(BaseModel):
-    # use by Page & Page, too
+    # use by Page & Post, too
     checkin: int = None
     coupon: int = None
     event: int = None
@@ -579,7 +579,7 @@ class PageStoryValue(BaseModel):
     page_post: int = Field(None, alias="page post")
     question: int = None
     user_post: int = Field(None, alias="user post")
-    other: int = None
+    other: int = None  # NOTE: PagePostiveFeedback has "other" too
 
 
 class PostReactionType(BaseModel):
@@ -632,10 +632,22 @@ class PageSiteLoggedType(BaseModel):
     api: int = Field(None, alias="API")
 
 
-class ByTypeValue(PostActivityValue, PostClickValue, PageStoryValue, PostReactionType):
+class ByTypeValue(
+    PostActivityValue,
+    PostClickValue,
+    PageStoryValue,
+    PostReactionType,
+    PageNegativeFeedback,
+    PagePostiveFeedback,
+    PageFanPaidType,
+    PageLikeSources,
+    PageSiteLoggedType,
+):
     """since pydantic union has some bug, so combine them (intersection)"""
 
-    # TODO: add more ByTypeValue, e.g. page_positive_feedback_by_type
+    # TODO:
+    # 1. add more ByTypeValue, e.g. page_positive_feedback_by_type
+    # 2. use InsightData's @root_validator to dynatmic narrow down types instead of current intersection
     pass
 
 
@@ -644,7 +656,7 @@ class InsightsValue(BaseModel):
     # Dict is for post_negative_feedback_by_type_unique/post_negative_feedback_by_type part
     # remove PostActivityValue, PostClickValue in union since pydantic has bugs
     # when dealing with union, https://github.com/samuelcolvin/pydantic/issues/2941
-    value: Union[int, ByTypeValue] = None
+    value: Optional[Union[int, Dict, ByTypeValue]] = None
     # value: PostActivityValue
 
     # if period is lifetime, end_time will not appear here
@@ -658,6 +670,42 @@ class InsightData(BaseModel):
     values: List[InsightsValue]
     title: Optional[str]  # might be json null
     description: str
+
+    @root_validator
+    def check_value_type(cls, values):
+        name = values["name"]
+        insights_value_list = values["values"]
+        for insights in insights_value_list:
+            # if insights.value == {}:
+            if (
+                name == "page_tab_views_login_top_unique"
+                or name == "page_tab_views_login_top"
+                or name == "page_tab_views_logout_top"  # ??
+                or name == "page_cta_clicks_logged_in_total"
+                or name == "page_cta_clicks_logged_in_unique"  ## ??
+                or name == "page_impressions_by_city_unique"
+                or name == "page_impressions_by_country_unique"
+                or name == "page_impressions_by_locale_unique"
+                or name == "page_impressions_by_age_gender_unique"
+                or name == "page_impressions_frequency_distribution"  # ??
+                or name == "page_impressions_viral_frequency_distribution"
+                or name == "page_views_external_referrals"
+                or name == "page_views_by_profile_tab_logged_in_unique"
+                or name == "page_views_by_internal_referer_logged_in_unique"  # ?
+                or name == "page_views_by_referers_logged_in_unique"
+                #######
+                or name == "page_cta_clicks_by_site_logged_in_unique"  # ??
+                ## below this, there are ~ 20 similar names
+                # or name == "page_views_by_site_logged_in_unique"  # ??
+                or name == "post_video_view_time_by_age_bucket_and_gender"
+                or name == "post_video_view_time_by_region_id"
+                or name == "post_video_views_by_distribution_type"
+            ):
+                pass
+            else:
+                insights.value = ByTypeValue(**insights.value)
+
+        return values
 
 
 class InsightsCursors(BaseModel):
