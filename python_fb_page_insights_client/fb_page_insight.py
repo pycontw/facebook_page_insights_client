@@ -1,5 +1,9 @@
 from datetime import datetime, timedelta
-from typing import Any, List, Optional, Union, Dict, Tuple, Literal
+from typing import Any, List, Optional, Union, Dict, Tuple
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 from pydantic import BaseModel, BaseSettings, Field, validator
 from enum import Enum, auto, IntEnum
