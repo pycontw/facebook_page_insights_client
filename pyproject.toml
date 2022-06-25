@@ -10,6 +10,7 @@ pydantic = "^1.8.2"
 requests = "^2.25.1"
 python-dotenv = "^0.18.0"
 tinydb = "^4.5.1"
+typing-extensions = "^4.2.0"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.7"
