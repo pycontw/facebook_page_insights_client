@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, List, Optional, Union, Dict, Tuple, Literal
 
-from pydantic import BaseModel, BaseSettings, Field, validator
+from pydantic import BaseModel, BaseSettings, Field, validator, root_validator
 from enum import Enum, auto, IntEnum
 import requests
 from tinydb import TinyDB, Query
@@ -49,7 +49,8 @@ class Period(Enum):
 
 
 class QueryKey(Enum):
-    """ TODO: not used, just prepare, add it later"""
+    """TODO: not used, just prepare, add it later"""
+
     grant_type = auto()
     client_id = auto()
     client_secret = auto()
@@ -62,12 +63,20 @@ class QueryKey(Enum):
 
 
 class QueryValue(Enum):
-    """ TODO: not used, just prepare, add it later"""
+    """TODO: not used, just prepare, add it later"""
+
     fb_exchange_token = auto()
 
 
-class PostDetailMetric(Enum):
-    """ support period: lifetime """
+class PostMetric(Enum):
+    """support period: lifetime"""
+
+    ## web basic ##
+    post_impressions_organic_unique = auto()
+    post_clicks = auto()
+    post_activity = auto()
+
+    ## web detail ##
     post_clicks_by_type = auto()
     post_activity_by_action_type = auto()
     post_reactions_like_total = auto()
@@ -75,20 +84,150 @@ class PostDetailMetric(Enum):
     post_reactions_wow_total = auto()
     post_reactions_haha_total = auto()
 
+    #### others ####
+    # Page Post Engagement
+    post_engaged_users = auto()
+    post_negative_feedback = auto()
+    post_negative_feedback_unique = auto()
+    post_negative_feedback_by_type = auto()
+    post_negative_feedback_by_type_unique = auto()
+    post_engaged_fan = auto()
+    # post_clicks
+    post_clicks_unique = auto()
+    # x post_clicks_by_type
+    #  "value": {
+    #     "other clicks": 147,
+    #     "photo view": 9,
+    #     "link clicks": 190
+    #  }
+    post_clicks_by_type_unique = auto()
+
+    # Page Post Impressions
+    post_impressions = auto()
+    post_impressions_unique = auto()
+    post_impressions_paid = auto()
+    post_impressions_paid_unique = auto()
+    post_impressions_fan = auto()
+    post_impressions_fan_unique = auto()
+    post_impressions_fan_paid = auto()
+    post_impressions_fan_paid_unique = auto()
+    post_impressions_organic = auto()
+    post_impressions_viral = auto()
+    post_impressions_viral_unique = auto()
+    post_impressions_nonviral = auto()
+    post_impressions_nonviral_unique = auto()
+    # x "value": { # PageStoryValue
+    #      "other": 6502
+    # }
+    post_impressions_by_story_type = auto()  # by type
+    post_impressions_by_story_type_unique = auto()
+
+    # Page Post Reactions
+    post_reactions_sorry_total = auto()
+    post_reactions_anger_total = auto()
+    # x "value": {
+    #    "like": 69,
+    #    "love": 1
+    # }
+    post_reactions_by_type_total = auto()  # by type
+
+    # Stories
+    post_activity_unique = auto()
+    # x "value": { # PostActivityValue
+    #             "share": 13,
+    #             "like": 58,
+    #             "comment": 6
+    #         }
+    post_activity_by_action_type_unique = auto()
+
+    ## Page Video Views
+    post_video_complete_views_30s_autoplayed = auto()
+    post_video_complete_views_30s_clicked_to_play = auto()
+    post_video_complete_views_30s_organic = auto()
+    post_video_complete_views_30s_paid = auto()
+    post_video_complete_views_30s_unique = auto()
+
+    # Page Video Posts
+    post_video_avg_time_watched = auto()
+    post_video_complete_views_organic = auto()
+    post_video_complete_views_organic_unique = auto()
+    post_video_complete_views_paid = auto()
+    post_video_complete_views_paid_unique = auto()
+    post_video_retention_graph = auto()
+    post_video_retention_graph_clicked_to_play = auto()
+    post_video_retention_graph_autoplayed = auto()
+    post_video_views_organic = auto()
+    post_video_views_organic_unique = auto()
+    post_video_views_paid = auto()
+    post_video_views_paid_unique = auto()
+    post_video_length = auto()
+    post_video_views = auto()
+    post_video_views_unique = auto()
+    post_video_views_autoplayed = auto()
+    post_video_views_clicked_to_play = auto()
+    post_video_views_15s = auto()
+    post_video_views_60s_excludes_shorter = auto()
+    post_video_views_10s = auto()
+    post_video_views_10s_unique = auto()
+    post_video_views_10s_autoplayed = auto()
+    post_video_views_10s_clicked_to_play = auto()
+    post_video_views_10s_organic = auto()
+    post_video_views_10s_paid = auto()
+    post_video_views_10s_sound_on = auto()
+    post_video_views_sound_on = auto()
+    post_video_view_time = auto()
+    post_video_view_time_organic = auto()
+    # "data": [] ????
+    # TODO 1: like page_impressions_by_age_gender_unique?
+    post_video_view_time_by_age_bucket_and_gender = auto()
+    #  "values": [
+    #     {
+    #         "value": {} // usually it is just a simple "value": 0
+    #     }
+    # ],
+    # TODO: find a sample !!!!???
+    post_video_view_time_by_region_id = auto()
+    #  "value": {}
+    # TODO: like page_impressions_viral_frequency_distribution?
+    post_video_views_by_distribution_type = auto()
+    #  "value": {},
+    post_video_view_time_by_distribution_type = auto()
+    #  "value": {}
+    # should like page_impressions_by_country_unique
+    post_video_view_time_by_country_id = auto()
+
+    # Video Ad Breaks
+    # if not admin, "message": "(#200) Monetization metrics are only visible for Page admins with access to monetization insights.",
+    post_video_ad_break_ad_impressions = auto()
+    post_video_ad_break_earnings = auto()
+    post_video_ad_break_ad_cpm = auto()
+
+
+post_web_basic_metric_list = [
+    PostMetric.post_impressions_organic_unique,
+    PostMetric.post_clicks,
+    PostMetric.post_activity,
+]
+post_web_detail_metric_list = [
+    PostMetric.post_clicks_by_type,
+    PostMetric.post_activity_by_action_type,
+    PostMetric.post_reactions_like_total,
+    PostMetric.post_reactions_love_total,
+    PostMetric.post_reactions_wow_total,
+    PostMetric.post_reactions_haha_total,
     # not sure web uses it or below
-    # post_negative_feedback_by_type_unique = auto()
-    # post_negative_feedback_by_type = auto()
+    # post_negative_feedback_by_type_unique,
+    # post_negative_feedback_by_type
+]
 
-
-class PostMetric(Enum):
-    """ support period: lifetime """
-    post_impressions_organic_unique = auto()
-    post_clicks = auto()
-    post_activity = auto()
+post_web_basic_metric_set = set()
+for metric in post_web_basic_metric_list:
+    post_web_basic_metric_set.add(metric.name)
 
 
 class PageMetric(Enum):
-    """ support period: day/week/days_28/month """
+    """support period: day/week/days_28/month"""
+
     page_total_actions = auto()
     page_views_total = auto()
 
@@ -101,6 +240,313 @@ class PageMetric(Enum):
     # page_daily_follows_unique not found on https://developers.facebook.com/docs/graph-api/reference/v11.0/insights
     page_daily_follows_unique = auto()
     page_impressions_organic_unique = auto()
+
+    ##### Other #####
+    # TODO:
+    # below return is not value, is dict, but has not seen non empty data yet
+    # https://developers.facebook.com/docs/graph-api/reference/insights/#tab-types
+    # Page Content
+    #  "values": [
+    #                 {
+    #                     "value": {},
+    #                     "end_time": "2021-10-05T07:00:00+0000"
+    #                 },
+    #                 {
+    #                     "value": {
+    #                         "tab_home": 186,
+    #                         "tab_events": 4,
+    #                         "profile_posts": 6,
+    #                         "tab_pages_news_feed": 3,
+    #                         "about": 9,
+    #                         "tab_groups": 1,
+    #                         "community": 5,
+    #                         "posts": 12,
+    #                         "photos": 3,
+    #                         "tab_photos": 2,
+    #                         "tab_events_admin_tool": 1,
+    #                         "home": 236,
+    #                         "profile_about": 2,
+    #                         "profile_home": 21,
+    #                         "tab_about": 3,
+    #                         "(null)": 1,
+    #                         "events": 3
+    #                     },
+    #                     "end_time": "2021-10-06T07:00:00+0000"
+    #                 }
+    page_tab_views_login_top_unique = auto()  # by type
+    page_tab_views_login_top = auto()  #
+    page_tab_views_logout_top = auto()  # seen videos key
+
+    # TODO:
+    # Page CTA Clicks
+    #     "value": {
+    #       "1384356361683202": 0,
+    #       "1209660005819506": 0,
+    #       "736943423091169": 0
+    #       },
+    page_cta_clicks_logged_in_total = auto()
+    page_cta_clicks_logged_in_unique = auto()
+    # "value": {},
+    # TODO: by_site_logged ?
+    page_cta_clicks_by_site_logged_in_unique = auto()
+    page_cta_clicks_by_age_gender_logged_in_unique = auto()  # []
+    page_cta_clicks_logged_in_by_country_unique = auto()  # []
+    page_cta_clicks_logged_in_by_city_unique = auto()
+    page_call_phone_clicks_logged_in_unique = auto()  # "value": 0
+    page_call_phone_clicks_by_age_gender_logged_in_unique = auto()
+    page_call_phone_clicks_logged_in_by_country_unique = auto()
+    page_call_phone_clicks_logged_in_by_city_unique = auto()
+    page_call_phone_clicks_by_site_logged_in_unique = auto()
+    page_get_directions_clicks_logged_in_unique = auto()
+    page_get_directions_clicks_by_age_gender_logged_in_unique = auto()
+    page_get_directions_clicks_logged_in_by_country_unique = auto()
+    page_get_directions_clicks_logged_in_by_city_unique = auto()
+    page_get_directions_clicks_by_site_logged_in_unique = auto()  # {}
+    page_website_clicks_logged_in_unique = auto()
+    page_website_clicks_by_age_gender_logged_in_unique = auto()
+    page_website_clicks_logged_in_by_country_unique = auto()
+    page_website_clicks_logged_in_by_city_unique = auto()
+    page_website_clicks_by_site_logged_in_unique = auto()  # {}
+
+    # Page Engagement
+    page_engaged_users = auto()
+    page_consumptions = auto()
+    page_consumptions_unique = auto()
+    # x    "values": [ PostClickValue
+    #         {
+    #             "value": {
+    #                 "link clicks": 10,
+    #                 "other clicks": 16,
+    #                 "photo view": 8
+    #             },
+    page_consumptions_by_consumption_type = auto()  # by type
+    page_consumptions_by_consumption_type_unique = auto()  # by type
+    page_places_checkin_total = auto()
+    page_places_checkin_total_unique = auto()
+    page_places_checkin_mobile = auto()
+    page_places_checkin_mobile_unique = auto()
+    page_places_checkins_by_age_gender = auto()  # []????
+    page_places_checkins_by_locale = auto()
+    page_places_checkins_by_country = auto()
+    page_negative_feedback = auto()
+    page_negative_feedback_unique = auto()
+    page_negative_feedback_by_type = (  # {}, hide_all_clicks / hide_clicks
+        auto()
+    )  # by type # https://developers.facebook.com/docs/graph-api/reference/v12.0/insights#negative-feedback-type
+    page_negative_feedback_by_type_unique = auto()
+    # "like": 28,
+    # "comment": 1,
+    # "other": 6
+    page_positive_feedback_by_type = (
+        auto()
+    )  # https://developers.facebook.com/docs/graph-api/reference/v12.0/insights#positive-feedback-types
+    page_positive_feedback_by_type_unique = auto()
+    page_fans_online = auto()
+    page_fans_online_per_day = auto()
+    #     "value": {
+    #       "total": 6,
+    #       "paid": 0,
+    #       "unpaid": 6
+    # },
+    page_fan_adds_by_paid_non_paid_unique = auto()
+
+    # Page Impressions
+    page_impressions = auto()
+    page_impressions_unique = auto()
+    page_impressions_paid = auto()
+    page_impressions_paid_unique = auto()
+    page_impressions_organic = auto()
+    page_impressions_viral = auto()
+    page_impressions_viral_unique = auto()
+    page_impressions_nonviral = auto()
+    page_impressions_nonviral_unique = auto()
+    # x "page post": 422,
+    # "other": 10
+    page_impressions_by_story_type = auto()
+    page_impressions_by_story_type_unique = auto()
+    # TODO: by_city
+    # "value": {
+    #     "Tachung, Yilan, Taiwan": 1,
+    #     "Umuahia, Nigeria": 1,
+    page_impressions_by_city_unique = auto()
+    # "DE": 1,
+    # "BD": 1,
+    # "MO": 2,
+    # "HK": 6,
+    # "TW": 1028,
+    # TODO
+    page_impressions_by_country_unique = auto()
+    #  "value": {
+    # "zh_HK": 6,
+    # "en_GB": 30,
+    # "zh_TW": 924,
+    # "ko_KR": 1,
+    # "en_US": 118,
+    # "zh_CN": 10,
+    # "en_PI": 1,
+    # "ja_JP": 4,
+    # TODO:
+    page_impressions_by_locale_unique = auto()
+    # "M.35-44": 207,
+    # "F.25-34": 123,
+    # "U.18-24": 1,
+    # "M.25-34": 390,
+    # TODO:
+    page_impressions_by_age_gender_unique = auto()
+    page_impressions_frequency_distribution = auto()
+    #   "value": {
+    #                 "1": 361,
+    #                 "2": 19,
+    #                 "3": 1,
+    #                 "5": 1,
+    #                 "6-10": 4
+    #  },
+    # TODO:
+    page_impressions_viral_frequency_distribution = auto()
+
+    # Page Posts
+    page_posts_impressions = auto()
+    page_posts_impressions_unique = auto()
+    page_posts_impressions_paid = auto()
+    page_posts_impressions_paid_unique = auto()
+    page_posts_impressions_organic = auto()
+    page_posts_impressions_organic_unique = auto()
+    page_posts_served_impressions_organic_unique = auto()
+    page_posts_impressions_viral = auto()
+    page_posts_impressions_viral_unique = auto()
+    page_posts_impressions_nonviral = auto()
+    page_posts_impressions_nonviral_unique = auto()
+    #    "1": 975,
+    #    "2": 93,
+    #    "11-20": 6,
+    page_posts_impressions_frequency_distribution = auto()
+
+    # Page Reactions
+    page_actions_post_reactions_like_total = auto()  # take a little time to show
+    page_actions_post_reactions_love_total = auto()
+    page_actions_post_reactions_wow_total = auto()
+    page_actions_post_reactions_haha_total = auto()
+    page_actions_post_reactions_sorry_total = auto()
+    page_actions_post_reactions_anger_total = auto()
+    page_actions_post_reactions_total = auto()
+
+    # Page User Demographics
+    page_fans = auto()
+    page_fans_locale = auto()
+    page_fans_city = auto()
+    page_fans_country = auto()
+    page_fans_gender_age = auto()
+    #  "Other": 2,
+    #   "Your Page": 4
+    page_fans_by_like_source = auto()  # by type
+    page_fans_by_like_source_unique = auto()  # by type
+    page_fan_removes = auto()
+    page_fan_removes_unique = auto()
+    page_fans_by_unlike_source = auto()  # by type
+    page_fans_by_unlike_source_unique = auto()  # {}
+
+    # Page Video Views
+    page_video_views_paid = auto()
+    page_video_views_organic = auto()
+    # "total": 1,
+    # "unpaid": 1,
+    # "paid": 0
+    page_video_views_by_paid_non_paid = auto()
+    page_video_views_autoplayed = auto()
+    page_video_views_click_to_play = auto()
+    page_video_views_unique = auto()
+    page_video_repeat_views = auto()
+    page_video_complete_views_30s = auto()
+    page_video_complete_views_30s_paid = auto()
+    page_video_complete_views_30s_organic = auto()
+    page_video_complete_views_30s_autoplayed = auto()
+    page_video_complete_views_30s_click_to_play = auto()
+    page_video_complete_views_30s_unique = auto()
+    page_video_complete_views_30s_repeat_views = auto()
+
+    page_video_views_10s = auto()
+    page_video_views_10s_paid = auto()
+    page_video_views_10s_organic = auto()
+    page_video_views_10s_autoplayed = auto()
+    page_video_views_10s_click_to_play = auto()
+    page_video_views_10s_unique = auto()
+    page_video_views_10s_repeat = auto()
+    page_video_view_time = auto()
+
+    # Page Views
+    # page_views_total
+    page_views_logout = auto()
+    page_views_logged_in_total = auto()
+    page_views_logged_in_unique = auto()
+    # "value": {
+    #     "https://pycast.firstory.io/": 1,
+    #     "https://www.google.com/": 3
+    # },
+    # TODO:
+    page_views_external_referrals = auto()
+    page_views_by_profile_tab_total = auto()
+    # TODO:
+    # "HOME": 378,
+    # "POSTS": 5,
+    # "ABOUT": 2,
+    # "EVENTS": 2,
+    # "GROUPS": 1
+    page_views_by_profile_tab_logged_in_unique = auto()
+    page_views_by_internal_referer_logged_in_unique = auto()
+    # TODO: API? or api? case sensitive?
+    # "OTHER": 4, <- will omit if zero
+    # "WWW": 173,
+    # "MOBILE": 249
+    page_views_by_site_logged_in_unique = auto()
+    # "45-54.F": 6,
+    page_views_by_age_gender_logged_in_unique = auto()
+    # TODO:
+    # "Facebook": 14,
+    # "google.com": 1,
+    # "none": 13
+    page_views_by_referers_logged_in_unique = auto()
+
+    # x Stories:
+    #     "fan": 56,
+    #     "other": 262,
+    #     "mention": 4,
+    #     "page post": 15
+    # },
+    page_content_activity_by_action_type_unique = auto()  # by type
+    page_content_activity_by_age_gender_unique = auto()
+    page_content_activity_by_city_unique = auto()
+    page_content_activity_by_country_unique = auto()
+    page_content_activity_by_locale_unique = auto()
+    page_content_activity = auto()
+    # x PageStoryValue
+    # "fan": 4,
+    # "page post": 2,
+    # "other": 29
+    # {
+    #     "value": {
+    #         "other": 12,
+    #         "fan": 10
+    #     },
+    #     "end_time": "2021-10-25T07:00:00+0000"
+    # },
+    page_content_activity_by_action_type = auto()  # by type
+
+    # Video Ad Breaks
+    page_daily_video_ad_break_ad_impressions_by_crosspost_status = auto()
+    page_daily_video_ad_break_cpm_by_crosspost_status = auto()
+    page_daily_video_ad_break_earnings_by_crosspost_status = auto()
+
+
+page_web_basic_metric_list = [
+    PageMetric.page_total_actions,
+    PageMetric.page_views_total,
+    PageMetric.page_fan_adds_unique,
+    PageMetric.page_fan_adds,
+    PageMetric.page_post_engagements,
+    PageMetric.page_video_views,
+    PageMetric.page_daily_follows_unique,
+    PageMetric.page_impressions_organic_unique,
+]
 
 
 class DebugError(BaseModel):
@@ -118,14 +564,90 @@ class PostActivityValue(BaseModel):
 
 
 class PostClickValue(BaseModel):
-    photo_view: int = Field(None, alias='photo view')
-    link_clicks: int = Field(None, alias='link clicks')
-    other_clicks: int = Field(None, alias='other clicks')
+    photo_view: int = Field(None, alias="photo view")
+    link_clicks: int = Field(None, alias="link clicks")
+    other_clicks: int = Field(None, alias="other clicks")
 
 
-class ByTypeValue(PostActivityValue, PostClickValue):
-    ''' since pydantic union has some bug, so combine them (intersection)'''
-    # TODO: add more ByTypeValue, e.g. page_positive_feedback_by_type
+class PageStoryValue(BaseModel):
+    # use by Page & Post, too
+    checkin: int = None
+    coupon: int = None
+    event: int = None
+    fan: int = None
+    mention: int = None
+    page_post: int = Field(None, alias="page post")
+    question: int = None
+    user_post: int = Field(None, alias="user post")
+    other: int = None  # NOTE: PagePostiveFeedback has "other" too
+
+
+class PostReactionType(BaseModel):
+    sorry: Optional[int]
+    anger: Optional[int]
+    like: Optional[int]
+    love: Optional[int]
+    wow: Optional[int]
+    haha: Optional[int]
+
+
+class PageNegativeFeedback(BaseModel):
+    hide_clicks: Optional[int]
+    hide_all_clicks: Optional[int]
+    report_spam_clicks: Optional[int]
+    unlike_page_clicks: Optional[int]
+
+
+class PagePostiveFeedback(BaseModel):
+    like: Optional[int]
+    comment: Optional[int]
+    other: Optional[int]
+    answer: Optional[int]
+    claim: Optional[int]
+    link: Optional[int]
+    rsvp: Optional[int]
+
+
+class PageFanPaidType(BaseModel):
+    # undocumented
+    total: Optional[int]
+    paid: Optional[int]
+    unpaid: Optional[int]
+
+
+class PageLikeSources(BaseModel):
+    ads: int = Field(None, alias="Ads")
+    news_feed: int = Field(None, alias="News Feed")
+    page_suggestions: int = Field(None, alias="Page Suggestions")
+    restored_likes: int = Field(None, alias="Restored Likes from Reactivated Accounts")
+    search: int = Field(None, alias="Search")
+    your_page: int = Field(None, alias="Your Page")
+    other: int = Field(None, alias="Other")  # undocumented
+
+
+class PageSiteLoggedType(BaseModel):
+    other: int = Field(None, alias="OTHER")
+    www: int = Field(None, alias="WWW")
+    mobile: int = Field(None, alias="MOBILE")
+    api: int = Field(None, alias="API")
+
+
+class ByTypeValue(
+    PostActivityValue,
+    PostClickValue,
+    PageStoryValue,
+    PostReactionType,
+    PageNegativeFeedback,
+    PagePostiveFeedback,
+    PageFanPaidType,
+    PageLikeSources,
+    PageSiteLoggedType,
+):
+    """since pydantic union has some bug, so combine them (intersection)"""
+
+    # TODO:
+    # 1. add more ByTypeValue, e.g. page_positive_feedback_by_type
+    # 2. use InsightData's @root_validator to dynatmic narrow down types instead of current intersection
     pass
 
 
@@ -134,7 +656,7 @@ class InsightsValue(BaseModel):
     # Dict is for post_negative_feedback_by_type_unique/post_negative_feedback_by_type part
     # remove PostActivityValue, PostClickValue in union since pydantic has bugs
     # when dealing with union, https://github.com/samuelcolvin/pydantic/issues/2941
-    value: Union[int, ByTypeValue] = None
+    value: Optional[Union[int, Dict, ByTypeValue]] = None
     # value: PostActivityValue
 
     # if period is lifetime, end_time will not appear here
@@ -148,6 +670,42 @@ class InsightData(BaseModel):
     values: List[InsightsValue]
     title: Optional[str]  # might be json null
     description: str
+
+    @root_validator
+    def check_value_type(cls, values):
+        name = values["name"]
+        insights_value_list = values["values"]
+        for insights in insights_value_list:
+            # if insights.value == {}:
+            if (
+                name == "page_tab_views_login_top_unique"
+                or name == "page_tab_views_login_top"
+                or name == "page_tab_views_logout_top"  # ??
+                or name == "page_cta_clicks_logged_in_total"
+                or name == "page_cta_clicks_logged_in_unique"  ## ??
+                or name == "page_impressions_by_city_unique"
+                or name == "page_impressions_by_country_unique"
+                or name == "page_impressions_by_locale_unique"
+                or name == "page_impressions_by_age_gender_unique"
+                or name == "page_impressions_frequency_distribution"  # ??
+                or name == "page_impressions_viral_frequency_distribution"
+                or name == "page_views_external_referrals"
+                or name == "page_views_by_profile_tab_logged_in_unique"
+                or name == "page_views_by_internal_referer_logged_in_unique"  # ?
+                or name == "page_views_by_referers_logged_in_unique"
+                #######
+                or name == "page_cta_clicks_by_site_logged_in_unique"  # ??
+                ## below this, there are ~ 20 similar names
+                # or name == "page_views_by_site_logged_in_unique"  # ??
+                or name == "post_video_view_time_by_age_bucket_and_gender"
+                or name == "post_video_view_time_by_region_id"
+                or name == "post_video_views_by_distribution_type"
+            ):
+                pass
+            else:
+                insights.value = ByTypeValue(**insights.value)
+
+        return values
 
 
 class InsightsCursors(BaseModel):
@@ -203,8 +761,8 @@ class GranularScope(BaseModel):
 
 
 class DebugData(BaseModel):
-    ''' TODO: success or error can be a union
-    '''
+    """TODO: success or error can be a union"""
+
     is_valid: bool
     scopes: List[str]  # error will have a empty list
     # "email",
@@ -250,18 +808,15 @@ class DebugResponse(BaseModel):
 class PostData(BaseModel):
     id: str
     # e.g. 2021-08-07T07:00:00+0000
-    created_time: str = Field(
-        format='date-time'
-    )
+    created_time: str = Field(format="date-time")
     message: Optional[str]  # either message or story
     # "story": "PyCon Taiwan 更新了封面相片。", or "PyCon Taiwan updated their status."
     story: Optional[str]
     page_id: Optional[str]
 
-    @validator('created_time')
+    @validator("created_time")
     def set_created_time(cls, v):
-        return datetime.strptime(
-            v, '%Y-%m-%dT%H:%M:%S+%f').isoformat()
+        return datetime.strptime(v, "%Y-%m-%dT%H:%M:%S+%f").isoformat()
 
 
 class PostsPaging(BaseModel):
@@ -285,9 +840,7 @@ class PostCompositeData(BaseModel):
 
 class PageDefaultWebInsight(BaseModel):
     page_id: str
-    end_time: str = Field(
-        format='date-time'
-    )
+    end_time: str = Field(format="date-time")
     period: str = None
 
     actions_on_page: int = None
@@ -298,10 +851,9 @@ class PageDefaultWebInsight(BaseModel):
     page_followers: int = None
     post_reach: int = None
 
-    @validator('end_time')
+    @validator("end_time")
     def set_end_time(cls, v):
-        return datetime.strptime(
-            v, '%Y-%m-%dT%H:%M:%S+%f').isoformat()
+        return datetime.strptime(v, "%Y-%m-%dT%H:%M:%S+%f").isoformat()
 
 
 class PartialJSONSchema(BaseModel):
@@ -333,8 +885,7 @@ class PostDefaultWebInsight(BaseModel):
     post_id: str = None
 
     # NOTE: this is injected, not in return data of fb page insight api request
-    query_time: str = Field(None,
-                            format='date-time')
+    query_time: str = Field(None, format="date-time")
 
     period: str = Period.lifetime.name
 
@@ -380,12 +931,12 @@ class FBPageInsight(BaseSettings):
 
     # https://developers.facebook.com/docs/graph-api/reference/v10.0/insights
     # field(init=False, default='https://graph.facebook.com')
-    api_server = 'https://graph.facebook.com'
-    api_version = 'v10.0'
+    api_server = "https://graph.facebook.com"
+    api_version = "v10.0"
 
     class Config:
-        env_file = '.env'
-        env_file_encoding = 'utf-8'
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
     # class Config:
     #     env_file = ".env"
@@ -408,7 +959,7 @@ class FBPageInsight(BaseSettings):
 
     @property
     def api_url(self):
-        return f'{self.api_server}/{self.api_version}'
+        return f"{self.api_server}/{self.api_version}"
 
     def _page_id(self, page_id: str):
         if page_id is None:
@@ -419,16 +970,15 @@ class FBPageInsight(BaseSettings):
         return used_page_id
 
     def get_long_lived_token(self, access_token: str):
-        ''' either user token or page_token'''
+        """either user token or page_token"""
         if self.fb_app_id == "" or self.fb_app_secret == "":
             return ""
-        url = f'{self.api_url}/oauth/access_token?grant_type=fb_exchange_token&client_id={self.fb_app_id}&client_secret={self.fb_app_secret}&fb_exchange_token={access_token}'
+        url = f"{self.api_url}/oauth/access_token?grant_type=fb_exchange_token&client_id={self.fb_app_id}&client_secret={self.fb_app_secret}&fb_exchange_token={access_token}"
         r = requests.get(url)
         json_dict = r.json()
         resp = LongLivedResponse(**json_dict)
         if resp.error is not None:
-            raise ValueError(
-                f"fail to get long-lived token:{resp.error.message}")
+            raise ValueError(f"fail to get long-lived token:{resp.error.message}")
         if resp.access_token is not None:
             # self.fb_user_access_token = resp.access_token
             return resp.access_token
@@ -470,10 +1020,9 @@ class FBPageInsight(BaseSettings):
             return page_token
 
         # check cached tinyDB
-        db = TinyDB('db.json')
+        db = TinyDB("db.json")
         q = Query()
-        store_record = db.get(
-            q.page_id == target_page_id)
+        store_record = db.get(q.page_id == target_page_id)
         if store_record:
             page_long_lived_token = store_record["page_long_lived_token"]
             self.fb_page_access_token_dict[target_page_id] = page_long_lived_token
@@ -484,8 +1033,7 @@ class FBPageInsight(BaseSettings):
             #     # only use pre-defined page_token when user_token is not present
             #     return self.fb_default_page_access_token
             # else:
-            raise ValueError(
-                "fb_user_access_token/page_token should be assigned first")
+            raise ValueError("fb_user_access_token/page_token should be assigned first")
         # NOTE:
         # If not get no_expire_page_token suecessfully, still set self.fb_page_access_token_dict[target_page_id]  = "",
         # this is to avoid retrying failure in this time process running
@@ -494,12 +1042,13 @@ class FBPageInsight(BaseSettings):
             test_token = self.fb_default_page_access_token
             resp = self.debug_token(test_token)
             data = resp.data
-            if data is None or data.is_valid is False or data.type != 'PAGE':
+            if data is None or data.is_valid is False or data.type != "PAGE":
                 print("invalid page token")
             elif self._check_scope(data, target_page_id) is False:
                 # elif data.profile_id != target_page_id: # in some cases profile_is is missing
                 print(
-                    f"no has pages_show_list/pages_read_engagement for this page_id & page token:{target_page_id}")
+                    f"no has pages_show_list/pages_read_engagement for this page_id & page token:{target_page_id}"
+                )
             elif data.expires_at == 0:
                 no_expire_page_token = test_token
                 print("get long-lived page token")
@@ -515,22 +1064,27 @@ class FBPageInsight(BaseSettings):
             else:
                 if self._check_scope(data, target_page_id) is False:
                     print(
-                        f"does not have pages_show_list/pages_read_engagement for this page_id & user token:{target_page_id}")
+                        f"does not have pages_show_list/pages_read_engagement for this page_id & user token:{target_page_id}"
+                    )
                 else:
                     if data.expires_at == 0:
                         print("got long-lived user token yet")
                         no_expire_user_token = test_token
                     else:
                         # get long-lived token (which is never expired for accessing some basic data, e.g. page insights)
-                        no_expire_user_token = self.get_long_lived_token(
-                            test_token)
+                        no_expire_user_token = self.get_long_lived_token(test_token)
                         # resp2 = self.debug_token(no_expire_user_token)
                     no_expire_page_token = self.get_page_token_from_user_token(
-                        target_page_id, no_expire_user_token)
+                        target_page_id, no_expire_user_token
+                    )
 
         if no_expire_page_token:
-            db.insert({'page_id': target_page_id,
-                      'page_long_lived_token': no_expire_page_token})
+            db.insert(
+                {
+                    "page_id": target_page_id,
+                    "page_long_lived_token": no_expire_page_token,
+                }
+            )
         else:
             raise ValueError("no available valid user/page token")
 
@@ -538,7 +1092,7 @@ class FBPageInsight(BaseSettings):
         return no_expire_page_token
 
     def debug_token(self, token: str):
-        url = f'{self.api_url}/debug_token?access_token={token}&input_token={token}'
+        url = f"{self.api_url}/debug_token?access_token={token}&input_token={token}"
         r = requests.get(url)
         json_dict = r.json()
         resp = DebugResponse(**json_dict)
@@ -547,34 +1101,39 @@ class FBPageInsight(BaseSettings):
     # TODO: better way to refresh token instead of getting all pages' tokens?
 
     def get_page_token_from_user_token(self, target_page_id: str, user_token: str):
-        url = f'{self.api_url}/me/accounts?access_token={user_token}'
+        url = f"{self.api_url}/me/accounts?access_token={user_token}"
         r = requests.get(url)
         json_dict = r.json()
         resp = AccountResponse(**json_dict)
         if resp.error is not None:
             raise ValueError(
-                f"fail to get page token from user token:{resp.error.message}")
+                f"fail to get page token from user token:{resp.error.message}"
+            )
         if resp.data is not None and len(resp.data) > 0:
             for data in resp.data:
                 if data.access_token is not None and data.id == target_page_id:
                     return data.access_token
         return ""
 
-    def compose_fb_graph_api_page_request(self, page_id: str, endpoint: str, param_dict: Dict[str, str] = {}, object_id=""):
+    def compose_fb_graph_object_endpoint_api(
+        self,
+        page_id: str,
+        endpoint: str,
+        param_dict: Dict[str, str] = {},
+        object_id: str = "",
+    ):
+        """object_id is page_id by default (if not specify)"""
+
         # TODO: refactor it later, page_id & object_id position
-        if page_id:
-            page_token = self.get_page_long_lived_token(page_id)
-        elif object_id:
-            page_token = self.get_page_long_lived_token(page_id)
-        else:
-            raise ValueError("no passed token")
+        page_token = self.get_page_long_lived_token(page_id)
+
+        if not object_id:
+            object_id = page_id
 
         params = self._convert_para_dict(param_dict)
-        url = ""
-        if object_id:
-            url = f'{self.api_url}/{object_id}/{endpoint}?access_token={page_token}{params}'
-        elif page_id:
-            url = f'{self.api_url}/{page_id}/{endpoint}?access_token={page_token}{params}'
+
+        url = f"{self.api_url}/{object_id}/{endpoint}?access_token={page_token}{params}"
+
         r = requests.get(url)
         json_dict = r.json()
         return json_dict
@@ -582,28 +1141,32 @@ class FBPageInsight(BaseSettings):
     def _convert_para_dict(self, param_dict: Dict[str, str]):
         params = ""
         for key, value in param_dict.items():
-            params += f'&{key}={value}'
+            params += f"&{key}={value}"
         return params
 
     def _convert_metric_list(self, metric_list: List[PageMetric]):
-        metric_value = ''
+        metric_value = ""
         for i in range(0, len(metric_list)):
             metric = metric_list[i]
             if i == 0:
                 metric_value += metric.name
             else:
-                metric_value += ","+metric.name
+                metric_value += "," + metric.name
         return metric_value
 
     def _check_since_less_than_until(self, since: int, until: int):
         if since > until:
             raise ValueError("since is more than until, not valid")
 
-    def get_page_insights(self, page_id: str = None,
-                          user_defined_metric_list: List[PageMetric] = [],
-                          since: int = None, until: int = None,
-                          date_preset: DatePreset = DatePreset.yesterday,
-                          period: Period = Period.week):
+    def get_page_insights(
+        self,
+        page_id: str = None,
+        user_defined_metric_list: List[PageMetric] = [],
+        since: int = None,
+        until: int = None,
+        date_preset: DatePreset = DatePreset.yesterday,
+        period: Period = Period.week,
+    ):
         page_id = self._page_id(page_id)
         # page_token = self.get_page_long_lived_token(page_id)
 
@@ -612,16 +1175,32 @@ class FBPageInsight(BaseSettings):
         # 2. support empty period? it will return day/week/days_28
 
         if len(user_defined_metric_list) == 0:
-            user_defined_metric_list = [e for e in PageMetric]
+            user_defined_metric_list = page_web_basic_metric_list
         metric_value = self._convert_metric_list(user_defined_metric_list)
 
         if since is not None and until is not None:
             self._check_since_less_than_until(since, until)
-            json_dict = self.compose_fb_graph_api_page_request(
-                page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name, "since": since, "until": until})
+            json_dict = self.compose_fb_graph_object_endpoint_api(
+                page_id,
+                "insights",
+                {
+                    "metric": metric_value,
+                    "date_preset": date_preset.name,
+                    "period": period.name,
+                    "since": since,
+                    "until": until,
+                },
+            )
         else:
-            json_dict = self.compose_fb_graph_api_page_request(
-                page_id, "insights", {"metric": metric_value, "date_preset": date_preset.name, 'period': period.name})
+            json_dict = self.compose_fb_graph_object_endpoint_api(
+                page_id,
+                "insights",
+                {
+                    "metric": metric_value,
+                    "date_preset": date_preset.name,
+                    "period": period.name,
+                },
+            )
 
         resp = InsightsResponse(**json_dict)
         return resp
@@ -639,12 +1218,16 @@ class FBPageInsight(BaseSettings):
             if next_url == "":
                 if since is not None and until is not None:
                     self._check_since_less_than_until(since, until)
-                    json_dict = self.compose_fb_graph_api_page_request(
+                    json_dict = self.compose_fb_graph_object_endpoint_api(
                         # {"since": 1601555261, "until": 1625489082})
-                        page_id, "posts", {"since": since, "until": until})
+                        page_id,
+                        "posts",
+                        {"since": since, "until": until},
+                    )
                 else:
-                    json_dict = self.compose_fb_graph_api_page_request(
-                        page_id, "posts")
+                    json_dict = self.compose_fb_graph_object_endpoint_api(
+                        page_id, "posts"
+                    )
                 resp = PostsResponse(**json_dict)
             else:
                 r = requests.get(next_url)
@@ -657,77 +1240,103 @@ class FBPageInsight(BaseSettings):
         total_resp = PostsResponse(data=post_data_list, paging=resp.paging)
         return total_resp
 
-    def get_post_insight(self, post_id: str, basic_metric=True, complement_metric=True, user_defined_metric_list: List[PageMetric] = []):
+    def get_post_insight(
+        self,
+        post_id: str,
+        basic_metric=True,
+        complement_metric=True,
+        user_defined_metric_list: List[PostMetric] = [],
+    ):
 
         if len(user_defined_metric_list) == 0:
             metric_list = []
             if basic_metric is True:
-                metric_list += [
-                    e for e in PostMetric]
+                metric_list += post_web_basic_metric_list  # [
+                # e for e in PostMetric]
             if complement_metric is True:
-                metric_list += [e for e in PostDetailMetric]
+                # [e for e in PostDetailMetric]
+                metric_list += post_web_detail_metric_list
         else:
             metric_list = user_defined_metric_list
         metric_value = self._convert_metric_list(metric_list)
 
-        page_id = post_id.split('_')[0]
+        page_id = post_id.split("_")[0]
         # page_token = self.get_page_long_lived_token(page_id)
 
-        json_dict = self.compose_fb_graph_api_page_request(
-            page_id, "insights", {"metric": metric_value}, object_id=post_id)
+        json_dict = self.compose_fb_graph_object_endpoint_api(
+            page_id, "insights", {"metric": metric_value}, object_id=post_id
+        )
         # NOTE: somehow FB will return invalid api result
         # if json_dict.get("data") is None:
         #     print("not ok") for debugging,
         resp = InsightsResponse(**json_dict)
         return resp
 
-    def get_page_default_web_insight(self, page_id: str = None, since_date: Tuple[str, str, str] = None, until_date: Tuple[str, str, str] = None,
-                                     date_preset: DatePreset = DatePreset.yesterday,
-                                     period: Literal[Period.day, Period.week, Period.days_28, Period.month] = Period.week,  return_as_dict=False):
-        """ since_date/until_date is (2021,9,9) format & period can not be lifetime"""
+    def get_page_default_web_insight(
+        self,
+        page_id: str = None,
+        since_date: Tuple[str, str, str] = None,
+        until_date: Tuple[str, str, str] = None,
+        date_preset: DatePreset = DatePreset.yesterday,
+        period: Literal[
+            Period.day, Period.week, Period.days_28, Period.month
+        ] = Period.week,
+        return_as_dict=False,
+    ):
+        """since_date/until_date is (2021,9,9) format & period can not be lifetime"""
         page_id = self._page_id(page_id)
         if period == Period.lifetime:
             raise ValueError(
-                'period can not be lifetime when querying default page insight')
+                "period can not be lifetime when querying default page insight"
+            )
 
         since = None
         until = None
         if since_date is not None and until_date is not None:
-            since = int(datetime(
-                *since_date).timestamp())
-            until = int(datetime(
-                *until_date).timestamp())
+            since = int(datetime(*since_date).timestamp())
+            until = int(datetime(*until_date).timestamp())
 
         page_summary = self.get_page_insights(
-            page_id, since=since, until=until, date_preset=date_preset, period=period)
+            page_id, since=since, until=until, date_preset=date_preset, period=period
+        )
         if page_summary.error is not None:
-            raise ValueError(
-                f"page insight error:{page_summary.error.message}")
+            raise ValueError(f"page insight error:{page_summary.error.message}")
         page_summary_data = page_summary.data
 
         # page_composite_data = PagePostsCompositeData(
         #     fetch_time=int(time.time()), page=page_summary_data)
 
-        resp = self._organize_to_web_page_data_shape(
-            page_summary_data, page_id)
+        resp = self._organize_to_web_page_data_shape(page_summary_data, page_id)
 
         if return_as_dict == True:
             return resp.dict()
         return resp
 
-    def get_post_default_web_insight(self, page_id: str = None, since_date: Tuple[str, str, str] = None, until_date: Tuple[str, str, str] = None,  between_days: int = None,  return_as_dict=False):
+    def get_post_default_web_insight(
+        self,
+        page_id: str = None,
+        since_date: Tuple[str, str, str] = None,
+        until_date: Tuple[str, str, str] = None,
+        between_days: int = None,
+        return_as_dict=False,
+    ):
         """
-            since_date and until_date are the tuple form of (2020, 9, 7)
-            if any of since_date and until_date is omitting, between_days will be used to decide either since_date or until_date and default value is 365. 
-            if since_date & until_date both are omitting, until_date will be today (now)
-            if since_date is omitting, since_date = until_date - between_days  
-            if since_date is not omitting but until_date is omitting, then until_date = since_date + between_days
-            since_date, until_date, period_days can not be all specified as non None at the same time, will throw a error 
+        since_date and until_date are the tuple form of (2020, 9, 7)
+        if any of since_date and until_date is omitting, between_days will be used to decide either since_date or until_date and default value is 365.
+        if since_date & until_date both are omitting, until_date will be today (now)
+        if since_date is omitting, since_date = until_date - between_days
+        if since_date is not omitting but until_date is omitting, then until_date = since_date + between_days
+        since_date, until_date, period_days can not be all specified as non None at the same time, will throw a error
         """
 
-        if since_date is not None and until_date is not None and between_days is not None:
+        if (
+            since_date is not None
+            and until_date is not None
+            and between_days is not None
+        ):
             raise ValueError(
-                "since_date, until_date, period_days can not all be non-None at the same time")
+                "since_date, until_date, period_days can not all be non-None at the same time"
+            )
 
         query_time = datetime.now()  # int(time.time())
         # e.g.
@@ -752,8 +1361,7 @@ class FBPageInsight(BaseSettings):
             if since_date is None:
                 until_time = query_time
             else:
-                since_time = datetime(
-                    *since_date)
+                since_time = datetime(*since_date)
                 until_time = since_time + timedelta(days=between_days)
         else:
             until_time = datetime(*until_date)
@@ -762,8 +1370,7 @@ class FBPageInsight(BaseSettings):
         if since_date is None:
             since_time = until_time - timedelta(days=between_days)
         else:
-            since_time = datetime(
-                *since_date)
+            since_time = datetime(*since_date)
         since = int(since_time.timestamp())
 
         recent_posts = self.get_posts(page_id, since, until)
@@ -779,32 +1386,34 @@ class FBPageInsight(BaseSettings):
             post_id = post.id
             post_insight = self.get_post_insight(post_id)
             if post_insight.error is not None:
-                raise ValueError(
-                    f"post insight error:P{post_insight.error.message}")
+                raise ValueError(f"post insight error:P{post_insight.error.message}")
             post_insight_data = post_insight.data
             for post_insight in post_insight_data:
-                if post_insight.name in PostMetric.__members__:
+                # PostMetric.__members__:
+                if post_insight.name in post_web_basic_metric_set:
                     composite_data.insight_data.append(post_insight)
                 else:
                     composite_data.insight_data_complement.append(post_insight)
             print("query post info. done")
-        print('query finish')
+        print("query finish")
         # page_composite_data = PagePostsCompositeData(fetch_time=int(time.time()),
         #                                              posts=post_composite_list)
 
         # organize to the data structure shown on web
-        resp = self._organize_to_web_posts_data_shape(
-            post_composite_list, query_time)
+        resp = self._organize_to_web_posts_data_shape(post_composite_list, query_time)
         # resp.query_time = query_time
         if return_as_dict == True:
             return resp.dict()
         return resp
 
-    def _organize_to_web_page_data_shape(self, page_data: List[InsightData], page_id: str):
-        """ currently it only support one period, it querying with on specific period in low level api,
-            will return multiple periods """
+    def _organize_to_web_page_data_shape(
+        self, page_data: List[InsightData], page_id: str
+    ):
+        """currently it only support one period, it querying with on specific period in low level api,
+        will return multiple periods"""
 
-        insight_dict: Dict[int:PageDefaultWebInsight] = {}
+        # TODO: test it, previously it is using [int, PageDefaultWebInsight]
+        insight_dict: Dict[int, PageDefaultWebInsight] = {}
 
         for page_insight_data in page_data:
             key = page_insight_data.name
@@ -819,7 +1428,8 @@ class FBPageInsight(BaseSettings):
                 insight = insight_dict.get(end_time)
                 if insight is None:
                     insight = PageDefaultWebInsight(
-                        period=period, page_id=page_id, end_time=end_time)
+                        period=period, page_id=page_id, end_time=end_time
+                    )
                     insight_dict[end_time] = insight
                     # insight.period = period
                     # insight.end_time = end_time
@@ -837,7 +1447,9 @@ class FBPageInsight(BaseSettings):
                     insight.videos = value
                 elif key == PageMetric.page_daily_follows_unique.name:
                     insight.page_followers = value
-                elif key == PageMetric.page_impressions_organic_unique.name:  # page_fans_gender_age?
+                elif (
+                    key == PageMetric.page_impressions_organic_unique.name
+                ):  # page_fans_gender_age?
                     insight.post_reach = value
 
             # we only care about name & values, other are meta fields
@@ -852,10 +1464,13 @@ class FBPageInsight(BaseSettings):
         pageInsightData.insight_list = list(insight_dict.values())
         # pageInsightData.used_metric_desc_dict = desc_dict
         pageInsightData.insight_json_schema = PartialJSONSchema(
-            **PageDefaultWebInsight.schema())
+            **PageDefaultWebInsight.schema()
+        )
         return pageInsightData
 
-    def _organize_to_web_posts_data_shape(self, posts_data: List[PostCompositeData], query_time: datetime):
+    def _organize_to_web_posts_data_shape(
+        self, posts_data: List[PostCompositeData], query_time: datetime
+    ):
 
         postsWebInsight = PostsWebInsightData()
         # for post_composite_data in posts_data:
@@ -887,14 +1502,14 @@ class FBPageInsight(BaseSettings):
             for post_inisght_data in insight_data_complement:
                 key = post_inisght_data.name
                 # desc_dict[key] = post_inisght_data.description
-                if key == PostDetailMetric.post_activity_by_action_type.name:
+                if key == PostMetric.post_activity_by_action_type.name:
                     data = post_inisght_data.values[0].value
                     # on web, this value = sum(on post + on shares) but no api to get sub part
                     insight.likes = data.like
                     insight.comments = data.comment
                     insight.shares = data.share
 
-                elif key == PostDetailMetric.post_clicks_by_type.name:
+                elif key == PostMetric.post_clicks_by_type.name:
                     data = post_inisght_data.values[0].value
 
                     insight.photo_views = data.photo_view
@@ -912,13 +1527,13 @@ class FBPageInsight(BaseSettings):
                 else:
                     value_obj = post_inisght_data.values[0]
                     value = value_obj.value
-                    if key == PostDetailMetric.post_reactions_like_total.name:
+                    if key == PostMetric.post_reactions_like_total.name:
                         insight.likes_like = value
-                    elif key == PostDetailMetric.post_reactions_love_total.name:
+                    elif key == PostMetric.post_reactions_love_total.name:
                         insight.likes_love = value
-                    elif key == PostDetailMetric.post_reactions_wow_total.name:
+                    elif key == PostMetric.post_reactions_wow_total.name:
                         insight.likes_wow = value
-                    elif key == PostDetailMetric.post_reactions_haha_total.name:
+                    elif key == PostMetric.post_reactions_haha_total.name:
                         insight.likes_haha = value
 
                     # e.g.
@@ -936,9 +1551,9 @@ class FBPageInsight(BaseSettings):
                     # post_reactions_haha_total
                     #   0
         postsWebInsight.insight_json_schema = PartialJSONSchema(
-            **PostDefaultWebInsight.schema())
-        postsWebInsight.post_json_schema = PartialJSONSchema(
-            **PostData.schema())
+            **PostDefaultWebInsight.schema()
+        )
+        postsWebInsight.post_json_schema = PartialJSONSchema(**PostData.schema())
 
         # postsWebInsight.used_metric_desc_dict = desc_dict
         return postsWebInsight
